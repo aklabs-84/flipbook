@@ -48,13 +48,13 @@ export const useBookStore = create<BookState>((set, get) => ({
     isPublic: false,
     coverUrl: null,
 
-    setPages: (pages) => set({ pages, totalLeaves: Math.ceil(pages.length / 2) }), // Assume 1 Page object = 1 Leaf (Front+Back)
+    setPages: (pages: Page[]) => set({ pages, totalLeaves: Math.ceil(pages.length / 2) }), // Assume 1 Page object = 1 Leaf (Front+Back)
 
-    flipTo: (leaf) => set((state) => ({
+    flipTo: (leaf: number) => set((state) => ({
         currentLeaf: Math.max(0, Math.min(leaf, state.totalLeaves))
     })),
 
-    addPage: (page) => set((state) => {
+    addPage: (page: Page) => set((state) => {
         const newPages = [...state.pages, page]
         return {
             pages: newPages,
@@ -62,7 +62,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         }
     }),
 
-    removePage: (pageId) => set((state) => {
+    removePage: (pageId: string) => set((state) => {
         const newPages = state.pages.filter(p => p.id !== pageId)
         return {
             pages: newPages,
