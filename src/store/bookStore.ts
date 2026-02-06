@@ -16,6 +16,10 @@ interface BookState {
     coverUrl: string | null
 
     // ... Actions
+    setPages: (pages: Page[]) => void
+    flipTo: (leaf: number) => void
+    addPage: (page: Page) => void
+    removePage: (pageId: string) => void
     setIsRtl: (isRtl: boolean) => void
     setTitle: (title: string) => void
     checkPassword: (password: string) => Promise<boolean>

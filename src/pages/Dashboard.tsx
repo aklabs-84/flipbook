@@ -99,16 +99,16 @@ export default function Dashboard() {
         setBooks(books.map(b => b.id === book.id ? { ...b, title: newTitle } : b))
     }
 
-    const handleDeleteBook = async (e: React.MouseEvent, book: BookRow) => {
-        e.preventDefault()
-        e.stopPropagation()
+    // const handleDeleteBook = async (e: React.MouseEvent, book: BookRow) => {
+    //     e.preventDefault()
+    //     e.stopPropagation()
 
-        if (!window.confirm(`정말로 '${book.title}' 프로젝트를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return
+    //     if (!window.confirm(`정말로 '${book.title}' 프로젝트를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return
 
-        await useBookStore.getState().deleteBook(book.id)
+    //     await useBookStore.getState().deleteBook(book.id)
 
-        setBooks(books.filter(b => b.id !== book.id))
-    }
+    //     setBooks(books.filter(b => b.id !== book.id))
+    // }
 
     const handleOpenSettings = (e: React.MouseEvent, book: BookRow) => {
         e.preventDefault()
