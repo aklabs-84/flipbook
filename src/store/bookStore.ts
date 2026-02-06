@@ -12,13 +12,27 @@ interface BookState {
     isRtl: boolean
     title: string
     passwordHash: string | null
-    // Interface Update
+    isPublic: boolean
     coverUrl: string | null
 
     // ... Actions
+    setIsRtl: (isRtl: boolean) => void
+    setTitle: (title: string) => void
+    checkPassword: (password: string) => Promise<boolean>
+    resetBook: () => void
+
+    fetchUserBooks: (userId: string) => Promise<BookRow[]>
+    fetchPublicBooks: () => Promise<BookRow[]>
+    createBook: (userId: string, title: string) => Promise<string | null>
+    createBookFromPDF: (userId: string, title: string, file: File, onProgress?: (progress: number) => void) => Promise<string | null>
+    addNewPage: (bookId: string) => Promise<void>
+    deleteBook: (bookId: string) => Promise<void>
+    updateBookTitle: (bookId: string, newTitle: string) => Promise<void>
+
     updateBookSettings: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null }) => Promise<void>
 
     fetchBookDetails: (bookId: string, preservePage?: boolean) => Promise<void>
+    updatePage: (pageId: string, updates: Partial<Page>) => void
     savePageChanges: (pageId: string, updates: Partial<Page>) => Promise<void>
 
     initDummyData: () => void // New Action for testing
@@ -56,14 +70,14 @@ export const useBookStore = create<BookState>((set, get) => ({
         }
     }),
 
-    updatePage: (pageId, updates) => set((state) => ({
+    updatePage: (pageId: string, updates: Partial<Page>) => set((state) => ({
         pages: state.pages.map(p => p.id === pageId ? { ...p, ...updates } : p)
     })),
 
-    setIsRtl: (isRtl) => set({ isRtl }),
-    setTitle: (title) => set({ title }),
+    setIsRtl: (isRtl: boolean) => set({ isRtl }),
+    setTitle: (title: string) => set({ title }),
 
-    checkPassword: async (password) => {
+    checkPassword: async (password: string) => {
         const state = get()
         // In a real app, use bcrypt compare on server.
         // For MVP, simple string comparison with stored 'hash' (plaintext).
@@ -83,7 +97,7 @@ export const useBookStore = create<BookState>((set, get) => ({
 
     // --- Supabase Actions ---
 
-    fetchUserBooks: async (userId) => {
+    fetchUserBooks: async (userId: string) => {
         const { data, error } = await supabase
             .from('books')
             .select('*')
@@ -111,7 +125,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         return data || []
     },
 
-    createBook: async (userId, title) => {
+    createBook: async (userId: string, title: string) => {
         // 1. Create Book
         const { data: bookData, error: bookError } = await supabase
             .from('books')
@@ -144,7 +158,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         return bookData.id
     },
 
-    createBookFromPDF: async (userId, title, file, onProgress) => {
+    createBookFromPDF: async (userId: string, title: string, file: File, onProgress?: (p: number) => void) => {
         try {
             // 1. Convert PDF to Images
             const { convertPDFToImages } = await import('../services/pdfService')
@@ -201,7 +215,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         }
     },
 
-    addNewPage: async (bookId) => {
+    addNewPage: async (bookId: string) => {
         const state = get()
         const currentPages = state.pages
         const lastPageNumber = currentPages.length > 0 ? currentPages[currentPages.length - 1].page_number : 0
@@ -239,7 +253,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         }))
     },
 
-    deleteBook: async (bookId) => {
+    deleteBook: async (bookId: string) => {
         // 1. Identify files to delete
         const { data: pages } = await supabase
             .from('pages')
@@ -275,7 +289,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         }
     },
 
-    updateBookTitle: async (bookId, newTitle) => {
+    updateBookTitle: async (bookId: string, newTitle: string) => {
         const { error } = await supabase
             .from('books')
             .update({ title: newTitle })
@@ -350,7 +364,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         })
     },
 
-    savePageChanges: async (pageId, updates) => {
+    savePageChanges: async (pageId: string, updates: Partial<Page>) => {
         // Optimistic Update
         get().updatePage(pageId, updates)
 
