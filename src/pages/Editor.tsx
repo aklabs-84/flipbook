@@ -6,6 +6,8 @@ import { useEditorStore, TextLayer } from '../store/editorStore'
 import { useResponsiveBook } from '../hooks/useResponsive'
 import Book from '../components/Book'
 import Modal from '../components/Modal'
+import AudioController from '../components/AudioController'
+import { useAudio } from '../hooks/useAudio'
 import { Database } from '../types/supabase'
 
 type PageData = Database['public']['Tables']['pages']['Row'] & { image_fit?: 'cover' | 'contain' }
@@ -40,6 +42,19 @@ export default function Editor() {
     } = useBookStore()
     const { scale, setLoading, isLoading, showPageNumbers, setShowPageNumbers } = useUIStore()
     const { selectedLayerId, setSelectedLayer } = useEditorStore()
+    const {
+        playPageFlip,
+        toggleMute,
+        isMuted,
+        bgmVolume,
+        changeBgmVolume,
+        isBgmPlaying,
+        toggleBgmPlay,
+        isBgmMuted,
+        toggleBgmMute,
+        sfxVolume,
+        changeSfxVolume
+    } = useAudio()
 
     useResponsiveBook()
 
@@ -521,6 +536,19 @@ export default function Editor() {
                         이미지 편집
                     </button>
 
+                    <AudioController
+                        isMuted={isMuted}
+                        toggleMute={toggleMute}
+                        isBgmPlaying={isBgmPlaying}
+                        toggleBgmPlay={toggleBgmPlay}
+                        bgmVolume={bgmVolume}
+                        changeBgmVolume={changeBgmVolume}
+                        isBgmMuted={isBgmMuted}
+                        toggleBgmMute={toggleBgmMute}
+                        sfxVolume={sfxVolume}
+                        changeSfxVolume={changeSfxVolume}
+                    />
+
                     <button
                         onClick={() => {
                             if (bookId) useBookStore.getState().addNewPage(bookId)
@@ -556,6 +584,7 @@ export default function Editor() {
                             await handleUpdateLayer(pageId, layer)
                         }}
                         isImageEditMode={isImageEditMode}
+                        onFlipPage={playPageFlip}
                     />
                 </div>
             </main>

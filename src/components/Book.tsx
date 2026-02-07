@@ -1,10 +1,12 @@
-import React, { useState } from 'react'
+
+import { useRef, useEffect, useCallback } from 'react'
+import HTMLFlipBook from 'react-pageflip'
 import { useBookStore } from '../store/bookStore'
 import { useUIStore } from '../store/uiStore'
-import { useSound } from '../hooks/useSound'
+// import { useAudio } from '../hooks/useAudio' // Hook used to live here
 import Page from './Page'
+import { TextLayer } from '../store/editorStore' // Removed useEditorStore
 import { Database } from '../types/supabase'
-import { TextLayer, useEditorStore } from '../store/editorStore'
 
 type PageData = Database['public']['Tables']['pages']['Row'] & { image_fit?: 'cover' | 'contain' }
 
@@ -12,291 +14,176 @@ interface BookProps {
     onEditPage?: (page: PageData) => void
     onUpdateLayer?: (pageId: string, layer: TextLayer) => void
     isImageEditMode: boolean
+    onFlipPage?: () => void
 }
 
-export default function Book({ onEditPage, onUpdateLayer, isImageEditMode }: BookProps) {
+export default function Book({ onEditPage, onUpdateLayer, isImageEditMode, onFlipPage }: BookProps) {
     const {
         pages,
         currentLeaf,
+        flipTo,
         isRtl,
-        totalLeaves,
-        flipTo
+        coverUrl // Added coverUrl from store
     } = useBookStore()
 
-    const { selectedLayerId } = useEditorStore()
-
     const { scale, showPageNumbers } = useUIStore()
-    const { playFlipSound } = useSound()
 
-    // State to track which leaf is currently moving to boost its z-index
-    const [movingLeafIndex, setMovingLeafIndex] = useState<number | null>(null)
+    const bookRef = useRef<any>(null)
 
-    // Initial transform based on current leaf (Open, Closed Front, Closed Back)
-    // Removed translateX shifts to keep the book centered and stable.
-    const getBookTransform = () => {
-        if (currentLeaf === 0) {
-            // Cover is closed
-            return isRtl
-                ? 'rotateY(-20deg) rotateX(5deg)'
-                : 'rotateY(20deg) rotateX(5deg)'
-        } else if (currentLeaf === totalLeaves) {
-            // Back cover is closed
-            return isRtl
-                ? 'rotateY(20deg) rotateX(5deg)'
-                : 'rotateY(-20deg) rotateX(5deg)'
-        } else {
-            // Book is open
-            return 'translateX(0) rotateY(0) rotateX(0)'
-        }
-    }
+    // Sync Store -> UI
+    useEffect(() => {
+        if (bookRef.current) {
+            const pageFlip = bookRef.current.pageFlip()
+            if (!pageFlip) return
 
-    const handleFlip = (targetLeaf: number) => {
-        console.log('handleFlip called:', { targetLeaf, currentLeaf, totalLeaves, isRtl })
-        if (targetLeaf === currentLeaf) {
-            console.log('Skipping: target matches current')
-            return
-        }
+            // Calculate target page index from leaf
+            // Leaf 0 -> Page 0 (Cover)
+            // Leaf 1 -> Page 2 (Content starts at 2 if we have Cover + Inside)
 
-        // Prevent flipping if editing text layer
-        if (selectedLayerId) {
-            console.log('Skipping: text layer selected')
-            return
-        }
-
-        if (targetLeaf < 0 || targetLeaf > totalLeaves) {
-            console.log('Skipping: out of bounds')
-            return
-        }
-
-        playFlipSound()
-
-        // Determine which leaf needs high z-index
-        // If going forward (current -> next): Next leaf needs boost?
-        // Actually, the page that IS MOVING needs boost.
-        // Forward: Leaf N flips to Left. It is moving.
-        // Backward: Leaf N-1 flips back to Right. It is moving.
-
-        const isForward = targetLeaf > currentLeaf
-
-        // Logic from original:
-        // if isForward, the new page (targetLeaf) is the one flipping from right to left?
-        // Let's trace:
-        // Leaf 1 is Cover. Leaf 1 is index 0.
-        // currentLeaf = 0. Click Cover (index 0).
-        // isForward = true. targetLeaf = 1.
-        // We want Page 1 (index 0) to flip.
-        // Page 1 IS the moving page.
-        // So 'movingLeafIndex' should be the index 0.
-
-        let activeLeafIndex = -1
-        if (isForward) {
-            // Moving from Right to Left. The page at 'targetLeaf' index?
-            // No, Leaves are 1-based count. Page Array is 0-based.
-            // Leaf 1 = Page[0].
-            // If currentLeaf=0, going to 1. We are flipping Page[0].
-            activeLeafIndex = targetLeaf - 1
-        } else {
-            // Backward.
-            // currentLeaf=1. Going to 0.
-            // We are flipping Page[0] Back to Right.
-            activeLeafIndex = currentLeaf - 1
-        }
-
-        setMovingLeafIndex(activeLeafIndex)
-        flipTo(targetLeaf)
-
-        // Reset z-index boost after animation
-        setTimeout(() => {
-            setMovingLeafIndex(null)
-        }, 1200)
-    }
-
-    const handlePageClick = (leafIndex: number, _isFlipped: boolean) => {
-        if (leafIndex < currentLeaf) {
-            handleFlip(currentLeaf - 1)
-        } else {
-            handleFlip(currentLeaf + 1)
-        }
-    }
-
-    // Swipe Logic
-    const [touchStart, setTouchStart] = useState<number | null>(null)
-    const [touchEnd, setTouchEnd] = useState<number | null>(null)
-
-    // Lower threshold for easier swipes on mobile
-    const minSwipeDistance = 30
-
-    const onTouchStart = (e: React.TouchEvent) => {
-        // Prevent default browser swipe navigation if possible, but be careful with scroll
-        // e.preventDefault() // Do NOT block vertical scroll
-        setTouchEnd(null)
-        setTouchStart(e.targetTouches[0].clientX)
-    }
-
-    const onTouchMove = (e: React.TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX)
-    }
-
-    const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return
-        const distance = touchStart - touchEnd
-        const isLeftSwipe = distance > minSwipeDistance
-        const isRightSwipe = distance < -minSwipeDistance
-
-        if (isLeftSwipe) {
-            // Swipe Left -> Go Next (unless RTL)
-            if (isRtl) {
-                handleFlip(currentLeaf - 1)
+            let targetPageIndex = 0
+            if (currentLeaf === 0) {
+                targetPageIndex = 0
             } else {
-                handleFlip(currentLeaf + 1)
+                targetPageIndex = currentLeaf === 0 ? 0 : (currentLeaf * 2 - 1)
+            }
+
+            try {
+                // Determine if we need to flip
+                pageFlip.flip(targetPageIndex)
+            } catch (e) {
+                console.warn("Flip error:", e)
             }
         }
-        if (isRightSwipe) {
-            // Swipe Right -> Go Prev (unless RTL)
-            if (isRtl) {
-                handleFlip(currentLeaf + 1)
-            } else {
-                handleFlip(currentLeaf - 1)
-            }
+    }, [currentLeaf, pages.length, coverUrl])
+
+    const onFlip = useCallback((e: any) => {
+        if (onFlipPage) onFlipPage()
+        // e.data is simply the page number (index)
+        // Sync UI -> Store
+        const newLeaf = Math.ceil(e.data / 2)
+
+        // Only update if different to avoid loop
+        if (newLeaf !== currentLeaf) {
+            flipTo(newLeaf)
         }
-    }
+    }, [onFlipPage, currentLeaf, flipTo])
 
-    // Keyboard Navigation
-    React.useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowRight') {
-                if (isRtl) handleFlip(currentLeaf - 1)
-                else handleFlip(currentLeaf + 1)
-            } else if (e.key === 'ArrowLeft') {
-                if (isRtl) handleFlip(currentLeaf + 1)
-                else handleFlip(currentLeaf - 1)
-            }
-        }
 
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [currentLeaf, isRtl, totalLeaves]) // Dependencies for latest state
+    const PAGE_WIDTH = 650
+    const PAGE_HEIGHT = 850
 
-    console.log('Book Render:', { pagesLength: pages.length, totalLeaves, currentLeaf }) // DEBUG
+    // Centering Logic
+    const isCover = currentLeaf === 0
+    // If Cover exists, it's on the Right. Shift Left by 25% of spread (50% of page).
+    const centerTransform = isCover ? 'translateX(-25%)' : 'translateX(0)'
 
     return (
         <div
-            className="relative perspective-3000 transition-transform duration-500 ease-out"
+            className="relative flex items-center justify-center h-full w-full overflow-hidden"
             style={{
-                width: 'var(--book-width)',
-                height: 'var(--book-height)',
-                transform: `scale(${scale})`,
-                touchAction: 'pan-y', // Allow vertical scroll, handle horizontal in JS
-                userSelect: 'none' // Prevent text selection while swiping
+                transform: `scale(${scale}) ${centerTransform}`,
+                transition: 'transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)'
             }}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            onContextMenu={(e) => e.preventDefault()}
         >
-            <div
-                className="w-full h-full relative preserve-3d transition-luxury"
-                style={{
-                    transform: getBookTransform(),
-                    boxShadow: (currentLeaf > 0 && currentLeaf < totalLeaves) ? 'var(--shadow-deep)' : 'none'
-                }}
+
+
+            {/* 
+                @ts-ignore: HTMLFlipBook types might be missing or strict 
+             */}
+            <HTMLFlipBook
+                width={PAGE_WIDTH}
+                height={PAGE_HEIGHT}
+                size="fixed"
+                minWidth={300}
+                maxWidth={1000}
+                minHeight={400}
+                maxHeight={1200}
+                maxShadowOpacity={0.2}
+                showCover={true}
+                mobileScrollSupport={true}
+                onFlip={onFlip}
+                ref={bookRef}
+                className="shadow-2xl"
+                style={{ margin: '0 auto' }}
+                startPage={currentLeaf === 0 ? 0 : (currentLeaf * 2 - 1)}
+                drawShadow={true}
+                flippingTime={800}
+                usePortrait={false}
+                startZIndex={10}
+                autoSize={true}
+                clickEventForward={true}
+                useMouseEvents={true}
+                swipeDistance={30}
+                showPageCorners={true}
+                disableFlipByClick={false}
             >
+                {(() => {
+                    const elements = []
 
-                {/* 
-                    Pages Array: [P1, P2, P3, P4, ...] 
-                    Leaf 0: Front=P1, Back=P2
-                    Leaf 1: Front=P3, Back=P4
-                */}
-                {Array.from({ length: totalLeaves }).map((_, index) => {
-                    // Leaf Index = index
-                    const leafNum = index + 1
-                    const isFlipped = leafNum <= currentLeaf
+                    // 1. Cover Logic
+                    if (coverUrl) {
+                        // Front Cover
+                        elements.push(
+                            <div
+                                key="book-cover-front"
+                                data-density="soft" // Set to soft for realistic paper feel
+                                className="relative bg-page-bg overflow-hidden shadow-2xl rounded-r-sm z-50 cursor-pointer"
+                            // onClick handler removed to prevent double-flip/skip
+                            >
+                                <img
+                                    src={coverUrl}
+                                    alt="Book Cover"
+                                    className="w-full h-full object-cover"
+                                />
+                                {/* Overlay/Title could go here */}
+                            </div>
+                        )
 
-                    const frontPage = pages[index * 2]
-                    const backPage = pages[index * 2 + 1]
-
-                    // Dynamic z-index
-                    // Base priority:
-                    // Right stack (not flipped): Lower index is Top. (0 is top) -> zIndex = 100 - index
-                    // Left stack (flipped): Higher index is Top. (max is top) -> zIndex = index
-
-                    let zIndex = 0
-                    if (!isFlipped) {
-                        zIndex = 100 - index
-                    } else {
-                        zIndex = index
+                        // Inside Cover (Blank/White)
+                        elements.push(
+                            <div
+                                key="book-cover-inside"
+                                data-density="soft"
+                                className="bg-white w-full h-full shadow-inner border-l border-gray-200/50"
+                            ></div>
+                        )
                     }
 
-                    // Boost z-index if this is the moving page
-                    if (movingLeafIndex === index) {
-                        zIndex += 200
-                    }
-
-                    // Critical Fix: Boost z-index of the active left page (flipped) 
-                    // to match the active right page hierarchy, ensuring clicks work.
-                    // Active Left Page is at index [currentLeaf - 1]
-                    // Lazy Loading Logic
-                    // Load Range: Current Leaf +/- 2
-                    // i.e., If currentLeaf is 5, load 3,4,5,6,7
-                    const LOAD_RANGE = 2
-                    const shouldLoad = Math.abs(index - currentLeaf) <= LOAD_RANGE
-
-                    if (isFlipped && index === currentLeaf - 1) {
-                        zIndex += 100
-                    }
-
-                    return (
+                    // 2. Content Pages
+                    const contentElements = pages.map((page, index) => (
                         <Page
-                            key={`leaf-${index}`}
-                            frontPage={frontPage}
-                            backPage={backPage}
-                            index={index}
-                            isFlipped={isFlipped}
-                            zIndex={zIndex}
+                            key={page.id}
+                            page={page}
+                            // Offset index if cover exists (Cover=0, Inside=1, Page1=2)
+                            index={index + (coverUrl ? 2 : 0)}
                             isRtl={isRtl}
+                            isFlipped={false}
+                            zIndex={0}
                             showPageNumbers={showPageNumbers}
-                            onPageClick={() => handlePageClick(index, isFlipped)}
+                            onPageClick={() => { }}
                             onEditPage={onEditPage || (() => { })}
                             onUpdateLayer={onUpdateLayer || (() => { })}
                             isImageEditMode={isImageEditMode}
-                            shouldLoad={shouldLoad}
+                            shouldLoad={Math.abs((currentLeaf * 2) - (index + (coverUrl ? 2 : 0))) < 4}
                         />
-                    )
-                })}
-            </div>
+                    ))
+                    elements.push(...contentElements)
 
-            {/* Navigation Controls (Arrows) */}
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 pointer-events-none">
-                {/* Prev Button */}
-                <button
-                    onClick={(e) => { e.stopPropagation(); isRtl ? handleFlip(currentLeaf + 1) : handleFlip(currentLeaf - 1); }}
-                    className={`
-                        w-12 h-12 rounded-full bg-white/80 backdrop-blur-sm shadow-lg border border-gray-100
-                        flex items-center justify-center text-gray-600 hover:text-brand-purple hover:scale-110 active:scale-95 transition
-                        pointer-events-auto
-                        ${(isRtl ? currentLeaf >= totalLeaves : currentLeaf === 0) ? 'opacity-0 cursor-default' : ''}
-                    `}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                    </svg>
-                </button>
+                    // 3. Padding Logic
+                    // Total pages must be even
+                    if (elements.length % 2 !== 0) {
+                        elements.push(
+                            <div
+                                key="padding-page-end"
+                                data-density="soft"
+                                className="bg-page-bg w-full h-full shadow-inner border-l border-gray-200/50"
+                            ></div>
+                        )
+                    }
 
-                {/* Next Button */}
-                <button
-                    onClick={(e) => { e.stopPropagation(); isRtl ? handleFlip(currentLeaf - 1) : handleFlip(currentLeaf + 1); }}
-                    className={`
-                        w-12 h-12 rounded-full bg-white/80 backdrop-blur-sm shadow-lg border border-gray-100
-                        flex items-center justify-center text-gray-600 hover:text-brand-purple hover:scale-110 active:scale-95 transition
-                        pointer-events-auto
-                         ${(isRtl ? currentLeaf === 0 : currentLeaf >= totalLeaves) ? 'opacity-0 cursor-default' : ''}
-                    `}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                </button>
-            </div>
+                    return elements
+                })()}
+            </HTMLFlipBook>
         </div>
     )
 }

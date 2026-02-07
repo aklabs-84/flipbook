@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react'
 import { Database } from '../types/supabase'
 import { optimizeImage } from '../services/imageOptimizer'
@@ -9,7 +10,7 @@ interface BookSettingsModalProps {
     isOpen: boolean
     onClose: () => void
     book: BookRow
-    onSave: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null }) => Promise<void>
+    onSave: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null }) => Promise<void>
 }
 
 export default function BookSettingsModal({ isOpen, onClose, book, onSave }: BookSettingsModalProps) {
@@ -17,9 +18,14 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
     const [password, setPassword] = useState('')
     const [hasPassword, setHasPassword] = useState(false)
     const [coverUrl, setCoverUrl] = useState<string | null>(book.cover_url || null)
+    const [bgmUrl, setBgmUrl] = useState<string | null>(book.bgm_url || null) // Added bgmUrl state
     const [isLoading, setIsLoading] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+    const [isBgmUploading, setIsBgmUploading] = useState(false)
+
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const bgmInputRef = useRef<HTMLInputElement>(null)
+    const audioPreviewRef = useRef<HTMLAudioElement>(null)
 
     useEffect(() => {
         if (isOpen) {
@@ -27,16 +33,25 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
             setHasPassword(!!book.password_hash)
             setPassword('')
             setCoverUrl(book.cover_url || null)
+            setBgmUrl(book.bgm_url || null)
         }
     }, [isOpen, book])
+
+    // Update audio preview when BGM URL changes
+    useEffect(() => {
+        if (audioPreviewRef.current) {
+            audioPreviewRef.current.load()
+        }
+    }, [bgmUrl])
 
     if (!isOpen) return null
 
     const handleSaveWithLogic = async () => {
         setIsLoading(true)
-        const updates: { isPublic: boolean, password?: string | null, coverUrl?: string | null } = {
+        const updates: { isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null } = {
             isPublic,
-            coverUrl
+            coverUrl,
+            bgmUrl
         }
 
         if (password) {
@@ -51,25 +66,20 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
     const handleRemovePassword = async () => {
         if (!confirm('비밀번호를 삭제하시겠습니까? 누구나 볼 수 있게 될 수 있습니다.')) return
         setIsLoading(true)
-        await onSave(book.id, { isPublic, password: null, coverUrl })
+        // Pass current state values to avoid overwriting them with undefined/null unintentionally
+        await onSave(book.id, { isPublic, password: null, coverUrl, bgmUrl })
         setHasPassword(false)
         setIsLoading(false)
     }
 
     const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return
-
         try {
             setIsUploading(true)
             const file = e.target.files[0]
-
-            // Optimize
             const optimizedFile = await optimizeImage(file)
-
-            // Upload
             const folderPath = `${book.user_id}/${book.id}/cover`
             const publicUrl = await uploadMedia(optimizedFile, 'uploads', folderPath)
-
             setCoverUrl(publicUrl)
         } catch (error) {
             console.error('Cover upload failed:', error)
@@ -79,10 +89,35 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
         }
     }
 
+    const handleBgmUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return
+
+        const file = e.target.files[0]
+
+        // Simple client-side size check (e.g., 5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('BGM 파일은 5MB 이하여야 합니다. (MP3 128kbps 권장)')
+            return
+        }
+
+        try {
+            setIsBgmUploading(true)
+            const folderPath = `${book.user_id}/${book.id}/bgm`
+            // Upload audio file as-is (no optimization for audio yet)
+            const publicUrl = await uploadMedia(file, 'uploads', folderPath)
+            setBgmUrl(publicUrl)
+        } catch (error) {
+            console.error('BGM upload failed:', error)
+            alert('BGM 업로드에 실패했습니다.')
+        } finally {
+            setIsBgmUploading(false)
+        }
+    }
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center shrink-0">
                     <h3 className="font-bold text-lg text-gray-800">프로젝트 설정</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -91,13 +126,13 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
                     </button>
                 </div>
 
-                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div className="p-6 space-y-6 overflow-y-auto">
                     {/* Cover Image Section */}
                     <div>
                         <label className="block text-sm font-medium text-gray-800 mb-2">커버 이미지</label>
                         <div className="flex items-center gap-4">
                             <div
-                                className="w-20 h-28 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center relative cursor-pointer group shadow-sm hover:shadow-md transition"
+                                className="w-20 h-28 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center relative cursor-pointer group shadow-sm hover:shadow-md transition shrink-0"
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 {coverUrl ? (
@@ -118,7 +153,7 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
                                     <span className="text-white text-xs font-bold drop-shadow-md">변경</span>
                                 </div>
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
                                     className="text-sm text-brand-purple font-medium hover:text-indigo-700 transition"
@@ -126,7 +161,7 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
                                 >
                                     이미지 업로드
                                 </button>
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-xs text-gray-400 mt-1 truncate">
                                     JPG, PNG 파일을 올리면<br />자동으로 최적화(WebP)됩니다.
                                 </p>
                                 <input
@@ -138,6 +173,65 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
                                 />
                             </div>
                         </div>
+                    </div>
+
+                    <div className="border-t border-gray-100"></div>
+
+                    {/* BGM Section */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-800 mb-2">배경 음악 (BGM)</label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <button
+                                    onClick={() => bgmInputRef.current?.click()}
+                                    className="text-sm text-brand-purple font-medium hover:text-indigo-700 transition"
+                                    disabled={isBgmUploading}
+                                >
+                                    {bgmUrl ? '음악 변경' : '음악 업로드'}
+                                </button>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    MP3, AAC 권장 (5MB 이하)<br />책을 열면 자동으로 반복 재생됩니다.
+                                </p>
+                                <input
+                                    type="file"
+                                    ref={bgmInputRef}
+                                    className="hidden"
+                                    accept="audio/*"
+                                    onChange={handleBgmUpload}
+                                />
+                            </div>
+                        </div>
+                        {isBgmUploading && (
+                            <div className="mt-2 text-xs text-indigo-500 flex items-center gap-2">
+                                <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                업로드 중...
+                            </div>
+                        )}
+                        {bgmUrl && (
+                            <div className="mt-3 bg-gray-50 rounded-lg p-2 border border-gray-200">
+                                <audio
+                                    ref={audioPreviewRef}
+                                    controls
+                                    className="w-full h-8"
+                                    src={bgmUrl}
+                                    loop={false}
+                                />
+                                <div className="text-xs text-gray-400 mt-1 flex justify-between items-center">
+                                    <span className="truncate max-w-[200px]">{bgmUrl.split('/').pop()}</span>
+                                    <button
+                                        onClick={() => setBgmUrl(null)}
+                                        className="text-red-400 hover:text-red-600 font-medium"
+                                    >
+                                        삭제
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="border-t border-gray-100"></div>
@@ -187,7 +281,7 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
                     </div>
                 </div>
 
-                <div className="p-6 bg-gray-50 flex justify-end gap-3">
+                <div className="p-6 bg-gray-50 flex justify-end gap-3 shrink-0">
                     <button
                         onClick={onClose}
                         className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium"
@@ -196,7 +290,7 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
                     </button>
                     <button
                         onClick={handleSaveWithLogic}
-                        disabled={isLoading}
+                        disabled={isLoading || isUploading || isBgmUploading}
                         className="px-6 py-2 bg-brand-purple text-white rounded-lg hover:bg-indigo-600 font-medium transition shadow-sm disabled:opacity-50"
                     >
                         {isLoading ? '저장 중...' : '저장'}

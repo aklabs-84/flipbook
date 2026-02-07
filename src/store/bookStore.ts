@@ -14,6 +14,8 @@ interface BookState {
     passwordHash: string | null
     isPublic: boolean
     coverUrl: string | null
+    bgmUrl: string | null // Added bgmUrl
+
 
     // ... Actions
     setPages: (pages: Page[]) => void
@@ -33,7 +35,7 @@ interface BookState {
     deleteBook: (bookId: string) => Promise<void>
     updateBookTitle: (bookId: string, newTitle: string) => Promise<void>
 
-    updateBookSettings: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null }) => Promise<void>
+    updateBookSettings: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null }) => Promise<void>
 
     fetchBookDetails: (bookId: string, preservePage?: boolean) => Promise<void>
     updatePage: (pageId: string, updates: Partial<Page>) => void
@@ -51,6 +53,8 @@ export const useBookStore = create<BookState>((set, get) => ({
     passwordHash: null,
     isPublic: false,
     coverUrl: null,
+    bgmUrl: null,
+
 
     setPages: (pages: Page[]) => set({ pages, totalLeaves: Math.ceil(pages.length / 2) }), // Assume 1 Page object = 1 Leaf (Front+Back)
 
@@ -96,8 +100,10 @@ export const useBookStore = create<BookState>((set, get) => ({
         isRtl: false,
         passwordHash: null,
         isPublic: false,
-        coverUrl: null
+        coverUrl: null,
+        bgmUrl: null
     }),
+
 
     // --- Supabase Actions ---
 
@@ -319,6 +325,10 @@ export const useBookStore = create<BookState>((set, get) => ({
             updates.cover_url = settings.coverUrl
         }
 
+        if (settings.bgmUrl !== undefined) {
+            updates.bgm_url = settings.bgmUrl
+        }
+
         const { error } = await supabase
             .from('books')
             .update(updates)
@@ -364,9 +374,11 @@ export const useBookStore = create<BookState>((set, get) => ({
             currentLeaf: preservePage ? state.currentLeaf : 0,
             passwordHash: book.password_hash,
             isPublic: book.is_public,
-            coverUrl: book.cover_url
+            coverUrl: book.cover_url,
+            bgmUrl: book.bgm_url
         })
     },
+
 
     savePageChanges: async (pageId: string, updates: Partial<Page>) => {
         // Optimistic Update

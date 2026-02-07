@@ -18,6 +18,7 @@ export interface Database {
                     password_hash: string | null
                     is_public: boolean
                     cover_url: string | null
+                    bgm_url: string | null // Added bgm_url
                     created_at: string
                     updated_at: string
                 }
@@ -29,6 +30,7 @@ export interface Database {
                     password_hash?: string | null
                     is_public?: boolean
                     cover_url?: string | null
+                    bgm_url?: string | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -40,6 +42,7 @@ export interface Database {
                     password_hash?: string | null
                     is_public?: boolean
                     cover_url?: string | null
+                    bgm_url?: string | null
                     created_at?: string
                     updated_at?: string
                 }

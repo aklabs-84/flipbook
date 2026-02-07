@@ -6,6 +6,8 @@ import { useAuthStore } from '../store/authStore'
 import { useResponsiveBook } from '../hooks/useResponsive'
 import Book from '../components/Book'
 import PasswordGate from '../components/PasswordGate'
+import AudioController from '../components/AudioController'
+import { useAudio } from '../hooks/useAudio'
 
 export default function Viewer() {
     const { bookId } = useParams()
@@ -21,6 +23,20 @@ export default function Viewer() {
 
     const [isAuthorized, setIsAuthorized] = useState(false)
     const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+    const {
+        playPageFlip,
+        toggleMute,
+        isMuted,
+        bgmVolume,
+        changeBgmVolume,
+        isBgmPlaying,
+        toggleBgmPlay,
+        isBgmMuted,
+        toggleBgmMute,
+        sfxVolume,
+        changeSfxVolume
+    } = useAudio()
 
     useResponsiveBook()
 
@@ -134,7 +150,20 @@ export default function Viewer() {
                     {title}
                 </h1>
 
-                <div className="w-20"></div> {/* Spacer */}
+                <div className="pointer-events-auto">
+                    <AudioController
+                        isMuted={isMuted}
+                        toggleMute={toggleMute}
+                        isBgmPlaying={isBgmPlaying}
+                        toggleBgmPlay={toggleBgmPlay}
+                        bgmVolume={bgmVolume}
+                        changeBgmVolume={changeBgmVolume}
+                        isBgmMuted={isBgmMuted}
+                        toggleBgmMute={toggleBgmMute}
+                        sfxVolume={sfxVolume}
+                        changeSfxVolume={changeSfxVolume}
+                    />
+                </div>
             </header>
 
             {/* Book Stage */}
@@ -142,6 +171,7 @@ export default function Viewer() {
                 <div className="relative transform-style-3d transition-transform duration-300 drop-shadow-2xl">
                     <Book
                         isImageEditMode={false}
+                        onFlipPage={playPageFlip}
                     // No edit handlers passed = read only
                     />
                 </div>
