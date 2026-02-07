@@ -162,12 +162,19 @@ export default function LandingPage() {
             {/* Footer */}
             <footer className="bg-white py-12 border-t border-earth-brown/5">
                 <div className="max-w-7xl mx-auto px-4 text-center">
-                    <img
-                        src="/aklabs_logo.svg"
-                        alt="AK Labs"
-                        className="h-8 mx-auto mb-6 opacity-80"
-                    />
-                    <p className="text-gray-400 font-medium">© 2024 AK Labs. All rights reserved.</p>
+                    <a
+                        href="https://litt.ly/aklabs"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block hover:opacity-80 transition-opacity"
+                    >
+                        <img
+                            src="/aklabs_logo.svg"
+                            alt="AK Labs"
+                            className="h-8 mx-auto mb-6 opacity-80"
+                        />
+                    </a>
+                    <p className="text-gray-400 font-medium">© 2026 AK Labs. All rights reserved.</p>
                 </div>
             </footer>
         </div>
