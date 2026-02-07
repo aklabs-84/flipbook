@@ -30,7 +30,9 @@ export default function LoginPage() {
                         onClick={() => signInWithKakao()}
                         className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-[#FEE500] rounded-xl hover:bg-[#FDD835] transition font-medium text-black/90"
                     >
-                        <img src="https://www.svgrepo.com/show/330511/kakao-talk.svg" className="w-6 h-6" alt="Kakao" />
+                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 3C5.925 3 1 6.925 1 11.775C1 15.525 3.45 18.75 7.125 20.1C7.125 20.1 6.375 22.8 6.15 23.4C6.15 23.4 6 23.775 6.6 23.625C10.05 21.375 12.3 19.5 12.3 19.5C12.45 19.5 12.6 19.5 12.75 19.5C18.825 19.5 23.75 15.6 23.75 10.725C23.75 5.85 18.825 3 12 3Z" fill="#3C1E1E" />
+                        </svg>
                         카카오 계정으로 계속하기
                     </button>
                 </div>

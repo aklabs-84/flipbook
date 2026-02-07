@@ -16,21 +16,22 @@ export default function LandingPage() {
             </div>
 
             {/* Hero Section */}
-            <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
+            <section className="relative pt-40 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
                 <div className="flex-1 text-center md:text-left z-20">
                     <span className="inline-block px-4 py-1.5 rounded-full bg-grass-green/10 text-grass-green font-bold text-sm mb-6 animate-pulse">
                         🌱 나만의 상상력이 자라나는 곳
                     </span>
                     <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight tracking-tight text-earth-brown">
                         나만의 <br />
-                        <span className="text-tomato-red relative inline-block">
+                        <span className="text-tomato-red relative inline-block md:leading-[1.3]">
                             플립북
                             <svg className="absolute w-full h-3 -bottom-1 left-0 text-mustard-yellow opacity-60" viewBox="0 0 100 10" preserveAspectRatio="none">
                                 <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
                             </svg>
                         </span>
                         을<br />
-                        만들어보세요!
+                        <span className="md:leading-[1.3]">만들어보세요!</span>
+
                     </h1>
                     <p className="text-xl text-gray-600 mb-10 max-w-lg mx-auto md:mx-0 leading-relaxed font-medium">
                         종이 위에서 춤추는 그림처럼, <br className="hidden sm:block" />
@@ -56,7 +57,7 @@ export default function LandingPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 relative w-full max-w-xl md:max-w-none">
+                <div className="flex-1 relative w-full max-w-xl md:max-w-none mt-12">
                     <div className="relative z-10 transform hover:scale-105 transition-transform duration-700 ease-in-out">
                         <img
                             src="/assets/hero_illustration.png"
@@ -144,9 +145,9 @@ export default function LandingPage() {
                     </div>
 
                     <div className="relative z-10">
-                        <h2 className="text-3xl md:text-5xl font-black text-warm-cream mb-8 leading-tight">
-                            당신의 이야기는 <br />
-                            어떤 모양인가요?
+                        <h2 className="text-3xl md:text-5xl font-black text-warm-cream mb-8 md:leading-[1.3] ">
+                            잠들어 있던 당신의 상상 <br />
+                            이제 책으로 펼쳐보세요!
                         </h2>
                         <Link
                             to={user ? "/dashboard" : "/login"}
