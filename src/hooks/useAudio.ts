@@ -50,7 +50,7 @@ export const useAudio = () => {
             volume: 1.0,
             preload: true,
             onload: () => console.log("SFX Loaded"),
-            onloaderror: (id, err) => console.warn("SFX Load Error:", err)
+            onloaderror: (_id, err) => console.warn("SFX Load Error:", err)
         })
         return () => {
             sfxRef.current?.unload()
@@ -86,7 +86,7 @@ export const useAudio = () => {
                 onpause: () => setIsBgmPlaying(false),
                 onstop: () => setIsBgmPlaying(false),
                 onend: () => setIsBgmPlaying(false),
-                onloaderror: (id, err) => console.error("BGM Load Error:", err)
+                onloaderror: (_id, err) => console.error("BGM Load Error:", err)
             })
 
             bgmRef.current = sound
