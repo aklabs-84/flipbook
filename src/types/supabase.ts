@@ -15,6 +15,7 @@ export interface Database {
                     user_id: string
                     title: string
                     is_rtl: boolean
+                    book_type: 'image' | 'pdf' | 'storybook' // Added book_type
                     password_hash: string | null
                     is_public: boolean
                     cover_url: string | null
@@ -27,6 +28,7 @@ export interface Database {
                     user_id: string
                     title?: string
                     is_rtl?: boolean
+                    book_type?: 'image' | 'pdf' | 'storybook' // Added book_type
                     password_hash?: string | null
                     is_public?: boolean
                     cover_url?: string | null
@@ -39,6 +41,7 @@ export interface Database {
                     user_id?: string
                     title?: string
                     is_rtl?: boolean
+                    book_type?: 'image' | 'pdf' | 'storybook' // Added book_type
                     password_hash?: string | null
                     is_public?: boolean
                     cover_url?: string | null
@@ -57,6 +60,11 @@ export interface Database {
                     media_type: 'image' | 'video' | null
                     text_layers: Json
                     layout_preset: string
+                    image_fit?: 'cover' | 'contain' | 'free' | null
+                    image_x?: number | null
+                    image_y?: number | null
+                    image_width?: number | null
+                    image_height?: number | null
                     created_at: string
                 }
                 Insert: {
@@ -67,6 +75,11 @@ export interface Database {
                     media_type?: 'image' | 'video' | null
                     text_layers?: Json
                     layout_preset?: string
+                    image_fit?: 'cover' | 'contain' | 'free' | null
+                    image_x?: number | null
+                    image_y?: number | null
+                    image_width?: number | null
+                    image_height?: number | null
                     created_at?: string
                 }
                 Update: {
@@ -77,6 +90,11 @@ export interface Database {
                     media_type?: 'image' | 'video' | null
                     text_layers?: Json
                     layout_preset?: string
+                    image_fit?: 'cover' | 'contain' | 'free' | null
+                    image_x?: number | null
+                    image_y?: number | null
+                    image_width?: number | null
+                    image_height?: number | null
                     created_at?: string
                 }
                 Relationships: []

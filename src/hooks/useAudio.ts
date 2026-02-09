@@ -17,6 +17,9 @@ export const useAudio = () => {
 
     // SFX States
     const [sfxVolume, setSfxVolume] = useState(1.0)
+    // Typewriter Speed (ms delay) - Lower is faster
+    const [typingSpeed, setTypingSpeed] = useState(50)
+    const [isTypewriterEnabled, setIsTypewriterEnabled] = useState(true)
     const sfxRef = useRef<Howl | null>(null)
 
     const [audioContextUnlocked, setAudioContextUnlocked] = useState(false)
@@ -133,6 +136,8 @@ export const useAudio = () => {
 
     const changeBgmVolume = useCallback((val: number) => setBgmVolume(val), [])
     const changeSfxVolume = useCallback((val: number) => setSfxVolume(val), [])
+    const changeTypingSpeed = useCallback((val: number) => setTypingSpeed(val), [])
+    const toggleTypewriter = useCallback(() => setIsTypewriterEnabled(prev => !prev), [])
 
     const playPageFlip = useCallback(() => {
         if (isMuted || sfxVolume === 0) return
@@ -174,6 +179,12 @@ export const useAudio = () => {
         playPageFlip,
         sfxVolume,
         changeSfxVolume,
+
+        // Typewriter Only
+        typingSpeed,
+        changeTypingSpeed,
+        isTypewriterEnabled,
+        toggleTypewriter,
 
         // Global
         toggleMute,

@@ -8,6 +8,8 @@ import Book from '../components/Book'
 import PasswordGate from '../components/PasswordGate'
 import AudioController from '../components/AudioController'
 import { useAudio } from '../hooks/useAudio'
+import Modal from '../components/Modal'
+import { Volume2, BookOpen, MousePointer } from 'lucide-react'
 
 export default function Viewer() {
     const { bookId } = useParams()
@@ -17,12 +19,14 @@ export default function Viewer() {
         title,
         passwordHash,
         checkPassword,
-        initDummyData
+        initDummyData,
+        bookType
     } = useBookStore()
     const { setLoading } = useUIStore()
 
     const [isAuthorized, setIsAuthorized] = useState(false)
     const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+    const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
     const {
         playPageFlip,
@@ -35,7 +39,11 @@ export default function Viewer() {
         isBgmMuted,
         toggleBgmMute,
         sfxVolume,
-        changeSfxVolume
+        changeSfxVolume,
+        typingSpeed,
+        changeTypingSpeed,
+        isTypewriterEnabled,
+        toggleTypewriter
     } = useAudio()
 
     useResponsiveBook()
@@ -54,6 +62,13 @@ export default function Viewer() {
             setIsAuthorized(true) // Helper for dev
         }
     }, [bookId, fetchBookDetails, resetBook, setLoading, initDummyData])
+
+    useEffect(() => {
+        // Show welcome modal when authorized and loading is done
+        if (isAuthorized && !isCheckingAuth) {
+            setShowWelcomeModal(true)
+        }
+    }, [isAuthorized, isCheckingAuth])
 
     useEffect(() => {
         // Auto-authorize if no password
@@ -162,17 +177,89 @@ export default function Viewer() {
                         toggleBgmMute={toggleBgmMute}
                         sfxVolume={sfxVolume}
                         changeSfxVolume={changeSfxVolume}
+                        typingSpeed={typingSpeed}
+                        changeTypingSpeed={changeTypingSpeed}
+                        isTypewriterEnabled={isTypewriterEnabled}
+                        toggleTypewriter={toggleTypewriter}
+                        bookType={bookType}
                     />
                 </div>
             </header>
+
+            {/* BGM & Guide Modal */}
+            <Modal
+                isOpen={showWelcomeModal}
+                onClose={() => {
+                    setShowWelcomeModal(false)
+                    // Try to play BGM on interaction if not playing
+                    if (!isBgmPlaying && !isBgmMuted) {
+                        toggleBgmPlay()
+                    }
+                }}
+                title="환영합니다! 👋"
+                actions={
+                    <button
+                        onClick={() => {
+                            setShowWelcomeModal(false)
+                            // Try to play BGM on interaction
+                            if (!isBgmPlaying && !isBgmMuted) {
+                                toggleBgmPlay()
+                            }
+                        }}
+                        className="w-full py-3 bg-brand-purple text-white rounded-xl font-bold shadow-lg hover:bg-indigo-600 transition-all flex items-center justify-center gap-2"
+                    >
+                        <span>책 읽기 시작</span>
+                        <BookOpen className="w-4 h-4" />
+                    </button>
+                }
+            >
+                <div className="flex flex-col gap-6">
+                    <div className="bg-mustard-yellow/10 p-4 rounded-2xl border border-mustard-yellow/20 flex items-start gap-3">
+                        <div className="p-2 bg-white rounded-full shadow-sm text-mustard-yellow shrink-0">
+                            <Volume2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-earth-brown mb-1">배경음악이 재생됩니다 🎵</h4>
+                            <p className="text-sm text-earth-brown/80 leading-relaxed">
+                                이 책에는 배경음악이 포함되어 있습니다.
+                                <br />
+                                놀라지 마세요! 상단 설정창에서 언제든지 끄거나 볼륨을 조절할 수 있어요.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h4 className="font-bold text-gray-700 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-brand-purple" />
+                            이렇게 읽어보세요
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col items-center text-center gap-2">
+                                <div className="p-2 bg-white rounded-lg shadow-sm">
+                                    <MousePointer className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <span className="text-xs font-bold text-gray-600">클릭하거나 터치해서<br />페이지 넘기기</span>
+                            </div>
+                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col items-center text-center gap-2">
+                                <div className="p-2 bg-white rounded-lg shadow-sm flex gap-1">
+                                    <div className="w-4 h-4 border border-gray-300 rounded flex items-center justify-center text-[8px] font-bold text-gray-400">←</div>
+                                    <div className="w-4 h-4 border border-gray-300 rounded flex items-center justify-center text-[8px] font-bold text-gray-400">→</div>
+                                </div>
+                                <span className="text-xs font-bold text-gray-600">키보드 방향키로<br />이동 가능</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
 
             {/* Book Stage */}
             <main className="flex-1 flex items-center justify-center relative perspective-3000 overflow-hidden">
                 <div className="relative transform-style-3d transition-transform duration-300 drop-shadow-2xl">
                     <Book
-                        isImageEditMode={false}
                         onFlipPage={playPageFlip}
-                    // No edit handlers passed = read only
+                        isLocked={true}
+                        typingSpeed={typingSpeed}
+                        isTypewriterEnabled={isTypewriterEnabled}
                     />
                 </div>
             </main>

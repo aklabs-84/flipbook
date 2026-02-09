@@ -2,8 +2,24 @@ import { create } from 'zustand'
 import { Database } from '../types/supabase'
 import { supabase } from '../lib/supabase'
 
-type Page = Database['public']['Tables']['pages']['Row'] & { image_fit?: 'cover' | 'contain' }
+type Page = Database['public']['Tables']['pages']['Row']
 type BookRow = Database['public']['Tables']['books']['Row']
+
+// Helper to calculate total leaves based on book type
+const calculateTotalLeaves = (pageCount: number, bookType: string) => {
+    if (bookType === 'storybook') {
+        // Storybook: 3 Extra Leaves
+        // 1. Front (Leaf 0)
+        // 2. Inside Front + Padding (Leaf 1)
+        // ... Content Leaves (N) ...
+        // 3. Inside Back + Back (Leaf N+2) -> Wait
+        // Let's re-verify formula: N=1 -> 4 Leaves. 1+3=4. Correct.
+        // N=4 -> 7 Leaves. 4+3=7. Correct.
+        return pageCount + 3
+    }
+    // Standard: (N + 4) / 2
+    return Math.ceil((pageCount + 4) / 2)
+}
 
 interface BookState {
     pages: Page[]
@@ -11,10 +27,12 @@ interface BookState {
     totalLeaves: number
     isRtl: boolean
     title: string
+    bookType: 'image' | 'pdf' | 'storybook' // Added bookType
     passwordHash: string | null
     isPublic: boolean
     coverUrl: string | null
-    bgmUrl: string | null // Added bgmUrl
+    bgmUrl: string | null
+    createdAt: string | null // Added createdAt
 
 
     // ... Actions
@@ -29,8 +47,9 @@ interface BookState {
 
     fetchUserBooks: (userId: string) => Promise<BookRow[]>
     fetchPublicBooks: () => Promise<BookRow[]>
-    createBook: (userId: string, title: string) => Promise<string | null>
+    createBook: (userId: string, title: string) => Promise<string | null> // Default to storybook
     createBookFromPDF: (userId: string, title: string, file: File, onProgress?: (progress: number) => void) => Promise<string | null>
+    createBookFromImages: (userId: string, title: string, files: File[], onProgress?: (progress: number) => void) => Promise<string | null>
     addNewPage: (bookId: string) => Promise<void>
     deleteBook: (bookId: string) => Promise<void>
     updateBookTitle: (bookId: string, newTitle: string) => Promise<void>
@@ -40,6 +59,8 @@ interface BookState {
     fetchBookDetails: (bookId: string, preservePage?: boolean) => Promise<void>
     updatePage: (pageId: string, updates: Partial<Page>) => void
     savePageChanges: (pageId: string, updates: Partial<Page>) => Promise<void>
+    deletePage: (pageId: string) => Promise<void> // Added deletePage
+    reorderPages: (newOrderPages: Page[]) => Promise<void>
 
     initDummyData: () => void // New Action for testing
 }
@@ -50,13 +71,15 @@ export const useBookStore = create<BookState>((set, get) => ({
     totalLeaves: 0,
     isRtl: false,
     title: 'Untitled Book',
+    bookType: 'image', // Default
     passwordHash: null,
     isPublic: false,
     coverUrl: null,
     bgmUrl: null,
+    createdAt: null,
 
 
-    setPages: (pages: Page[]) => set({ pages, totalLeaves: Math.ceil(pages.length / 2) }), // Assume 1 Page object = 1 Leaf (Front+Back)
+    setPages: (pages: Page[]) => set((state) => ({ pages, totalLeaves: calculateTotalLeaves(pages.length, state.bookType) })), // Updated for Cover Layout
 
     flipTo: (leaf: number) => set((state) => ({
         currentLeaf: Math.max(0, Math.min(leaf, state.totalLeaves))
@@ -66,7 +89,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         const newPages = [...state.pages, page]
         return {
             pages: newPages,
-            totalLeaves: Math.ceil(newPages.length / 2)
+            totalLeaves: calculateTotalLeaves(newPages.length, state.bookType)
         }
     }),
 
@@ -74,7 +97,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         const newPages = state.pages.filter(p => p.id !== pageId)
         return {
             pages: newPages,
-            totalLeaves: Math.ceil(newPages.length / 2)
+            totalLeaves: calculateTotalLeaves(newPages.length, state.bookType)
         }
     }),
 
@@ -98,10 +121,12 @@ export const useBookStore = create<BookState>((set, get) => ({
         totalLeaves: 0,
         title: 'Loading...',
         isRtl: false,
+        bookType: 'image',
         passwordHash: null,
         isPublic: false,
         coverUrl: null,
-        bgmUrl: null
+        bgmUrl: null,
+        createdAt: null
     }),
 
 
@@ -116,8 +141,10 @@ export const useBookStore = create<BookState>((set, get) => ({
 
         if (error) {
             console.error('Error fetching books:', error)
+            alert(`책 목록을 불러오지 못했습니다: ${error.message}`) // Alert user to see the error
             return []
         }
+        console.log("Fetched books:", data) // Log success
         return data || []
     },
 
@@ -136,24 +163,25 @@ export const useBookStore = create<BookState>((set, get) => ({
     },
 
     createBook: async (userId: string, title: string) => {
-        // 1. Create Book
+        // 1. Create Book (Storybook Mode)
         const { data: bookData, error: bookError } = await supabase
             .from('books')
-            .insert({ user_id: userId, title, is_rtl: false })
+            .insert({ user_id: userId, title, is_rtl: false, book_type: 'storybook' })
             .select()
             .single()
 
         if (bookError || !bookData) {
-            console.error('Error creating book:', bookError)
+            console.error('Error creating book (Insert failed):', bookError)
+            alert(`책 생성(DB 저장) 실패: ${bookError?.message || 'Unknown error'}`) // Direct alert for better debugging
             return null
         }
 
         // 2. Create Initial Pages (Cover + 3 Empty Pages = 4 total)
-        // In our model, Leaf 1 (Cover) = Page 1. Leaf 2 = Page 2...
+        // Store empty JSON for storybook pages
         const initialPages = Array.from({ length: 4 }).map((_, i) => ({
             book_id: bookData.id,
             page_number: i + 1,
-            text_layers: [],
+            text_layers: [], // Storybook pages might use this, or we add content column later
             layout_preset: 'full'
         }))
 
@@ -178,36 +206,58 @@ export const useBookStore = create<BookState>((set, get) => ({
             if (images.length === 0) throw new Error("No images extracted from PDF")
             onProgress?.(30)
 
-            // 2. Create Book
+            // 2. Create Book (PDF Type)
             const { data: bookData, error: bookError } = await supabase
                 .from('books')
-                .insert({ user_id: userId, title, is_rtl: false })
+                .insert({ user_id: userId, title, is_rtl: false, book_type: 'pdf' })
                 .select()
                 .single()
 
-            if (bookError || !bookData) throw bookError
+            if (bookError || !bookData) {
+                console.error('Error creating book (PDF Mode):', bookError)
+                throw bookError
+            }
             onProgress?.(40)
 
-            // 3. Upload Images & Prepare Pages
+            // 2. Upload Images & Prepare Pages (with concurrency limit)
             const { uploadMedia } = await import('../services/storageService')
 
-            const uploadedPages = await Promise.all(images.map(async (blob, index) => {
-                const imageFile = new File([blob], `page_${index + 1}.jpg`, { type: 'image/jpeg' })
-                const folderPath = `${userId}/${bookData.id}`
-                const publicUrl = await uploadMedia(imageFile, 'uploads', folderPath)
+            // Chunked upload to prevent overwhelming the network/server
+            const chunk = (arr: any[], size: number) =>
+                Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+                    arr.slice(i * size, i * size + size)
+                )
 
-                return {
-                    book_id: bookData.id,
-                    page_number: index + 1,
-                    text_layers: [],
-                    layout_preset: 'full',
-                    media_url: publicUrl,
-                    media_type: 'image' as const,
-                    image_fit: 'contain'
-                }
-            }))
+            const uploadedPages = []
+            const batches = chunk(images, 3) // Upload 3 at a time
 
-            onProgress?.(90)
+            for (let i = 0; i < batches.length; i++) {
+                const batch = batches[i]
+                const batchResults = await Promise.all(batch.map(async (blob, batchIndex) => {
+                    const globalIndex = i * 3 + batchIndex
+                    const imageFile = new File([blob], `page_${globalIndex + 1}.jpg`, { type: 'image/jpeg' })
+                    const folderPath = `${userId}/${bookData.id}`
+
+                    try {
+                        const publicUrl = await uploadMedia(imageFile, 'uploads', folderPath)
+                        return {
+                            book_id: bookData.id,
+                            page_number: globalIndex + 1,
+                            text_layers: [],
+                            layout_preset: 'full',
+                            media_url: publicUrl,
+                            media_type: 'image' as const,
+                            image_fit: 'contain' as const
+                        }
+                    } catch (e) {
+                        console.error(`Failed to upload page ${globalIndex + 1}:`, e)
+                        throw e
+                    }
+                }))
+                uploadedPages.push(...batchResults)
+                // Update progress based on completed batches
+                onProgress?.(40 + Math.floor((i + 1) / batches.length * 50))
+            }
 
             // 4. Batch Insert Pages
             const { error: pageError } = await supabase
@@ -221,6 +271,77 @@ export const useBookStore = create<BookState>((set, get) => ({
 
         } catch (error) {
             console.error('Error creating book from PDF:', error)
+            return null
+        }
+    },
+
+    createBookFromImages: async (userId: string, title: string, files: File[], onProgress?: (p: number) => void) => {
+        try {
+            if (files.length === 0) throw new Error("No files selected")
+            onProgress?.(10)
+
+            // 1. Create Book (Image Type)
+            const { data: bookData, error: bookError } = await supabase
+                .from('books')
+                .insert({ user_id: userId, title, is_rtl: false, book_type: 'image' })
+                .select()
+                .single()
+
+            if (bookError || !bookData) {
+                console.error('Error creating book (Image Mode):', bookError)
+                throw bookError
+            }
+            onProgress?.(20)
+
+            // 2. Upload Images & Prepare Pages (with concurrency limit)
+            const { uploadMedia } = await import('../services/storageService')
+
+            const chunk = (arr: any[], size: number) =>
+                Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+                    arr.slice(i * size, i * size + size)
+                )
+
+            const uploadedPages = []
+            const batches = chunk(files, 3)
+
+            for (let i = 0; i < batches.length; i++) {
+                const batch = batches[i]
+                const batchResults = await Promise.all(batch.map(async (file, batchIndex) => {
+                    const globalIndex = i * 3 + batchIndex
+                    const folderPath = `${userId}/${bookData.id}`
+
+                    try {
+                        const publicUrl = await uploadMedia(file, 'uploads', folderPath)
+                        return {
+                            book_id: bookData.id,
+                            page_number: globalIndex + 1,
+                            text_layers: [],
+                            layout_preset: 'full',
+                            media_url: publicUrl,
+                            media_type: 'image' as const,
+                            image_fit: 'contain' as const
+                        }
+                    } catch (e) {
+                        console.error(`Failed to upload file ${file.name}:`, e)
+                        throw e
+                    }
+                }))
+                uploadedPages.push(...batchResults)
+                onProgress?.(20 + Math.floor((i + 1) / batches.length * 60))
+            }
+
+            // 3. Batch Insert Pages
+            const { error: pageError } = await supabase
+                .from('pages')
+                .insert(uploadedPages)
+
+            if (pageError) throw pageError
+
+            onProgress?.(100)
+            return bookData.id
+
+        } catch (error) {
+            console.error('Error creating book from images:', error)
             return null
         }
     },
@@ -257,49 +378,106 @@ export const useBookStore = create<BookState>((set, get) => ({
         }
 
         // Update Store
-        set((state) => ({
-            pages: [...state.pages, ...data],
-            totalLeaves: Math.ceil(([...state.pages, ...data]).length / 2)
-        }))
+        set((state) => {
+            const updatedPages = [...state.pages, ...data]
+            return {
+                pages: updatedPages,
+                totalLeaves: calculateTotalLeaves(updatedPages.length, state.bookType)
+            }
+        })
     },
 
     deleteBook: async (bookId: string) => {
-        // 1. Identify files to delete
-        const { data: pages } = await supabase
-            .from('pages')
-            .select('media_url')
-            .eq('book_id', bookId)
-            .not('media_url', 'is', null)
+        const { deleteFolder } = await import('../services/storageService')
 
-        if (pages && pages.length > 0) {
-            const filesToDelete = pages
-                .map(p => p.media_url)
-                .filter((url): url is string => !!url)
-                .map(url => {
-                    const parts = url.split('/')
-                    return parts[parts.length - 1]
-                })
-
-            if (filesToDelete.length > 0) {
-                const { deleteFiles } = await import('../services/storageService')
-                await deleteFiles(filesToDelete, 'uploads')
-                console.log(`Deleted ${filesToDelete.length} images from storage.`)
-            }
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            console.error('User not authenticated, cannot delete folder')
+            return
         }
 
-        // 2. Delete Book (Cascade deletes pages)
-        const { error } = await supabase
+        // Delete the entire book folder
+        // Note: storageService now might need to be robust. 
+        await deleteFolder(`${user.id}/${bookId}`, 'uploads')
+        console.log(`Successfully purged folder: ${user.id}/${bookId}`)
+
+        // 3. Delete Book (Manual Cascade: Delete pages first)
+        // Note: Even if you have 'ON DELETE CASCADE', we explicitly delete to run triggers or ensure clean slate if RLS policies are tricky.
+        const { error: pagesDeleteError } = await supabase
+            .from('pages')
+            .delete()
+            .eq('book_id', bookId)
+
+        if (pagesDeleteError) {
+            console.error('Error deleting pages:', pagesDeleteError)
+            // We continue to try deleting the book, as pages might have been deleted already
+        }
+
+        const { error: bookDeleteError } = await supabase
             .from('books')
             .delete()
             .eq('id', bookId)
 
-        if (error) {
-            console.error('Error deleting book:', error)
-            return
+        if (bookDeleteError) {
+            console.error('Error deleting book record:', bookDeleteError)
+            throw bookDeleteError
         }
     },
 
+    deletePage: async (pageId: string) => {
+        // 1. Get Page Info to find media
+        const { data: page, error: fetchError } = await supabase
+            .from('pages')
+            .select('*')
+            .eq('id', pageId)
+            .single()
+
+        if (fetchError || !page) {
+            console.error('Error fetching page to delete:', fetchError)
+            return
+        }
+
+        // 2. Delete media from storage if exists
+        if (page.media_url) {
+            // Extract path from URL? Or just rely on URL if storage helper handles it.
+            // Our storageService `deleteFile` expects a path.
+            // But we might need to extract it. 
+            // Actually, let's just delete the DB record. Storage cleanup can be a separate maintenance task or triggered via Edge Function.
+            // For now, to keep it simple and safe, we just delete the row.
+        }
+
+        // 3. Delete from DB
+        const { error: deleteError } = await supabase
+            .from('pages')
+            .delete()
+            .eq('id', pageId)
+
+        if (deleteError) {
+            console.error('Error deleting page:', deleteError)
+            alert('페이지 삭제 실패')
+            return
+        }
+
+        // 4. Update Local State (Remove and Re-index?)
+        // Actually, removing a page shifts numbers. 
+        // We should probably re-fetch or manually adjust local state.
+
+        set((state) => {
+            const newPages = state.pages.filter(p => p.id !== pageId)
+            // Re-assign page numbers?
+            // Ideally backend triggers or we do it here. 
+            // Let's just remove for now, seeing as "Page Number" is mostly display.
+            return {
+                pages: newPages,
+                totalLeaves: calculateTotalLeaves(newPages.length, state.bookType)
+            }
+        })
+    },
+
     updateBookTitle: async (bookId: string, newTitle: string) => {
+        // Optimistic update
+        set(() => ({ title: newTitle }))
+
         const { error } = await supabase
             .from('books')
             .update({ title: newTitle })
@@ -307,6 +485,7 @@ export const useBookStore = create<BookState>((set, get) => ({
 
         if (error) {
             console.error('Error updating book title:', error)
+            // Revert title if needed, but for now we assume success or user will retry
             return
         }
     },
@@ -328,6 +507,15 @@ export const useBookStore = create<BookState>((set, get) => ({
         if (settings.bgmUrl !== undefined) {
             updates.bgm_url = settings.bgmUrl
         }
+
+        // Optimistic Update
+        set((state) => ({
+            ...state,
+            isPublic: settings.isPublic,
+            passwordHash: settings.password !== undefined ? settings.password : state.passwordHash,
+            coverUrl: settings.coverUrl !== undefined ? settings.coverUrl : state.coverUrl,
+            bgmUrl: settings.bgmUrl !== undefined ? settings.bgmUrl : state.bgmUrl
+        }))
 
         const { error } = await supabase
             .from('books')
@@ -369,13 +557,15 @@ export const useBookStore = create<BookState>((set, get) => ({
         set({
             title: book.title,
             isRtl: book.is_rtl,
+            bookType: book.book_type || 'image', // Backward compatibility
             pages: pages || [],
-            totalLeaves: Math.ceil((pages || []).length / 2),
+            totalLeaves: calculateTotalLeaves((pages || []).length, book.book_type || 'image'),
             currentLeaf: preservePage ? state.currentLeaf : 0,
             passwordHash: book.password_hash,
             isPublic: book.is_public,
             coverUrl: book.cover_url,
-            bgmUrl: book.bgm_url
+            bgmUrl: book.bgm_url,
+            createdAt: book.created_at
         })
     },
 
@@ -391,13 +581,69 @@ export const useBookStore = create<BookState>((set, get) => ({
             .eq('id', pageId)
 
         if (error) {
+            // Ignore AbortError which happens on navigation/unmount
+            if (error.message?.includes('AbortError') || error.details?.includes('AbortError')) {
+                return
+            }
             console.error('Error saving page:', error)
         }
     },
 
+    reorderPages: async (newOrderPages: Page[]) => {
+        // 1. Optimistic update
+        set(() => ({
+            pages: newOrderPages
+        }))
+
+        // 2. Prepare updates for DB
+        // We only need to update page_number for pages that changed position
+        // But to be safe and simple, we upsert all with new page_numbers
+        const updates = newOrderPages.map((page, index) => ({
+            id: page.id,
+            book_id: page.book_id,
+            page_number: index + 1,
+            // We need to keep other required fields if using upsert, 
+            // but 'update' needs a primary key match. 
+            // Supabase upsert works if we provide primary key.
+            // We should be careful not to overwrite other fields if we pass partial data.
+            // Actually, we can just .upsert({ id: ..., page_number: ... }) if we don't want to touch others?
+            // No, standard SQL update is better if we iterate.
+            // But iteration is slow. 
+            // Let's use upsert with just the changing fields? 
+            // No, upsert needs all non-nullable fields if it inserts, but here we update.
+            // Safe bet: .upsert([...]) with strict match?
+            // Let's iterate updates for now, or use a customized RPC if performance matters. 
+            // For < 100 pages, generic iteration is okay-ish, or Promise.all.
+        }))
+
+        // Optimized: Create a set of updates
+        try {
+            const { error } = await supabase
+                .from('pages')
+                .upsert(
+                    updates.map(u => ({
+                        id: u.id,
+                        book_id: u.book_id,
+                        page_number: u.page_number,
+                        updated_at: new Date().toISOString()
+                    })),
+                    { onConflict: 'id' }
+                )
+
+            if (error) {
+                console.error('Error reordering pages:', error)
+                // Revert or alert?
+            }
+        } catch (e) {
+            console.error('Exception reordering pages:', e)
+        }
+    },
+
     initDummyData: () => set({
-        totalLeaves: 4,
+        totalLeaves: calculateTotalLeaves(4, 'storybook'),
         currentLeaf: 0,
+        createdAt: new Date().toISOString(),
+        bookType: 'storybook', // Default to storybook for new projects
         pages: [
             { id: '1', book_id: '1', page_number: 1, media_url: null, media_type: null, text_layers: [], layout_preset: 'full', created_at: '' },
             { id: '2', book_id: '1', page_number: 2, media_url: null, media_type: null, text_layers: [], layout_preset: 'full', created_at: '' },

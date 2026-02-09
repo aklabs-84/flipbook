@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { Sliders } from 'lucide-react'
 
 interface AudioControllerProps {
     isMuted: boolean
@@ -12,6 +13,11 @@ interface AudioControllerProps {
     toggleBgmMute: () => void
     sfxVolume: number
     changeSfxVolume: (val: number) => void
+    typingSpeed?: number
+    changeTypingSpeed?: (val: number) => void
+    isTypewriterEnabled?: boolean
+    toggleTypewriter?: () => void
+    bookType?: 'image' | 'pdf' | 'storybook'
 }
 
 export default function AudioController({
@@ -24,7 +30,12 @@ export default function AudioController({
     isBgmMuted,
     toggleBgmMute,
     sfxVolume,
-    changeSfxVolume
+    changeSfxVolume,
+    typingSpeed = 50,
+    changeTypingSpeed,
+    isTypewriterEnabled = true,
+    toggleTypewriter,
+    bookType
 }: AudioControllerProps) {
     const [isOpen, setIsOpen] = useState(false)
 
@@ -36,27 +47,20 @@ export default function AudioController({
                 className={`p-2 rounded-xl transition flex items-center gap-2 border-2 
                     ${isOpen ? 'bg-brand-purple/10 border-brand-purple text-brand-purple' : 'bg-white border-transparent text-gray-500 hover:border-brand-purple/30 hover:text-brand-purple'}
                 `}
-                title="오디오 설정"
+                title="북 설정"
             >
-                {isMuted ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 opacity-50">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.75-4.75 3 3V5.25m0 13.5V11l-3-3-4.75 4.75M5.25 8.25h1.5m-1.5 7.5h1.5" />
-                    </svg>
-                ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
-                    </svg>
-                )}
-                {/* <span className="text-sm font-bold hidden sm:inline">오디오</span> */}
+                <Sliders className={`w-5 h-5 ${isBgmPlaying && !isMuted ? 'animate-pulse' : ''}`} />
+                {/* <span className="text-xs font-bold">SETTING</span> */}
             </button>
 
-            {/* Expanded Audio Panel (Dropdown) */}
             {isOpen && (
-                <div className="absolute top-full right-0 mt-2 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl w-64 border border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Audio Settings</span>
-                        <button onClick={toggleMute} className="text-xs text-brand-purple hover:underline" title="Toggle Master Mute">
+                <div className="absolute top-12 right-0 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 p-5 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
+                        <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase">Book Settings</span>
+                        <button
+                            onClick={toggleMute}
+                            className={`text-xs font-bold px-2 py-1 rounded transition-colors ${isMuted ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                        >
                             {isMuted ? 'Unmute All' : 'Mute All'}
                         </button>
                     </div>
@@ -105,7 +109,7 @@ export default function AudioController({
                     </div>
 
                     {/* SFX Controls */}
-                    <div>
+                    <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
                                 📖 SFX
@@ -123,6 +127,55 @@ export default function AudioController({
                             disabled={isMuted}
                         />
                     </div>
+
+                    {/* Typewriter Speed (Storybook Only) */}
+                    {bookType === 'storybook' && changeTypingSpeed && (
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                                    ✨ 글자 효과
+                                </span>
+                                <button
+                                    onClick={toggleTypewriter}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isTypewriterEnabled ? 'bg-brand-purple' : 'bg-gray-200'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isTypewriterEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+
+                            {isTypewriterEnabled && (
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                                            ⌨️ 글자 속도
+                                        </span>
+                                        <span className="text-xs text-gray-400 font-mono">
+                                            {typingSpeed < 30 ? '빠름' : typingSpeed > 80 ? '느림' : '보통'}
+                                        </span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="10"
+                                        step="1"
+                                        // Map delay (100-10) to speed (1-10)
+                                        value={11 - (typingSpeed / 10)}
+                                        onChange={(e) => {
+                                            const speedLevel = parseFloat(e.target.value)
+                                            const delay = (11 - speedLevel) * 10
+                                            changeTypingSpeed(delay)
+                                        }}
+                                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-purple"
+                                        disabled={isMuted}
+                                    />
+                                    <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                                        <span>느림</span>
+                                        <span>빠름</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

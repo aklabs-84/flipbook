@@ -1,8 +1,8 @@
-
 import { useState, useEffect, useRef } from 'react'
 import { Database } from '../types/supabase'
 import { optimizeImage } from '../services/imageOptimizer'
 import { uploadMedia } from '../services/storageService'
+import ConfirmationModal from './ConfirmationModal'
 
 type BookRow = Database['public']['Tables']['books']['Row']
 
@@ -10,18 +10,21 @@ interface BookSettingsModalProps {
     isOpen: boolean
     onClose: () => void
     book: BookRow
-    onSave: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null }) => Promise<void>
+    onSave: (bookId: string, settings: { title: string, isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null }) => Promise<void>
+    onDelete?: (bookId: string) => Promise<void>
 }
 
-export default function BookSettingsModal({ isOpen, onClose, book, onSave }: BookSettingsModalProps) {
+export default function BookSettingsModal({ isOpen, onClose, book, onSave, onDelete }: BookSettingsModalProps) {
+    const [title, setTitle] = useState(book.title)
     const [isPublic, setIsPublic] = useState(book.is_public)
     const [password, setPassword] = useState('')
-    const [hasPassword, setHasPassword] = useState(false)
+    const [hasPassword, setHasPassword] = useState(!!book.password_hash)
     const [coverUrl, setCoverUrl] = useState<string | null>(book.cover_url || null)
-    const [bgmUrl, setBgmUrl] = useState<string | null>(book.bgm_url || null) // Added bgmUrl state
+    const [bgmUrl, setBgmUrl] = useState<string | null>(book.bgm_url || null)
     const [isLoading, setIsLoading] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isBgmUploading, setIsBgmUploading] = useState(false)
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
     const bgmInputRef = useRef<HTMLInputElement>(null)
@@ -29,11 +32,13 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
 
     useEffect(() => {
         if (isOpen) {
+            setTitle(book.title)
             setIsPublic(book.is_public)
             setHasPassword(!!book.password_hash)
             setPassword('')
             setCoverUrl(book.cover_url || null)
             setBgmUrl(book.bgm_url || null)
+            setIsDeleteModalOpen(false)
         }
     }, [isOpen, book])
 
@@ -47,8 +52,14 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
     if (!isOpen) return null
 
     const handleSaveWithLogic = async () => {
+        if (!title.trim()) {
+            alert('프로젝트 이름을 입력해주세요.')
+            return
+        }
+
         setIsLoading(true)
-        const updates: { isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null } = {
+        const updates: { title: string, isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null } = {
+            title,
             isPublic,
             coverUrl,
             bgmUrl
@@ -67,7 +78,7 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
         if (!confirm('비밀번호를 삭제하시겠습니까? 누구나 볼 수 있게 될 수 있습니다.')) return
         setIsLoading(true)
         // Pass current state values to avoid overwriting them with undefined/null unintentionally
-        await onSave(book.id, { isPublic, password: null, coverUrl, bgmUrl })
+        await onSave(book.id, { title, isPublic, password: null, coverUrl, bgmUrl })
         setHasPassword(false)
         setIsLoading(false)
     }
@@ -114,6 +125,19 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
         }
     }
 
+    const handleDeleteClick = () => {
+        setIsDeleteModalOpen(true)
+    }
+
+    const handleConfirmDelete = async () => {
+        if (onDelete) {
+            await onDelete(book.id)
+            // onClose is handled by parent usually after delete, but we can call it here too if needed. 
+            // Usually onDelete will refresh the list, and this modal should be closed.
+            onClose()
+        }
+    }
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -127,6 +151,20 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
                 </div>
 
                 <div className="p-6 space-y-6 overflow-y-auto">
+                    {/* Title Section */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-800 mb-2">프로젝트 이름</label>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 outline-none text-lg font-bold text-gray-800 placeholder-gray-300"
+                            placeholder="프로젝트 이름을 입력하세요"
+                        />
+                    </div>
+
+                    <div className="border-t border-gray-100"></div>
+
                     {/* Cover Image Section */}
                     <div>
                         <label className="block text-sm font-medium text-gray-800 mb-2">커버 이미지</label>
@@ -279,24 +317,47 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave }: Boo
                             * 비밀번호를 설정하면 공개 여부와 상관없이 비밀번호를 입력해야 볼 수 있습니다.
                         </p>
                     </div>
+
+
                 </div>
 
-                <div className="p-6 bg-gray-50 flex justify-end gap-3 shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium"
-                    >
-                        취소
-                    </button>
-                    <button
-                        onClick={handleSaveWithLogic}
-                        disabled={isLoading || isUploading || isBgmUploading}
-                        className="px-6 py-2 bg-brand-purple text-white rounded-lg hover:bg-indigo-600 font-medium transition shadow-sm disabled:opacity-50"
-                    >
-                        {isLoading ? '저장 중...' : '저장'}
-                    </button>
+                <div className="p-6 bg-gray-50 flex justify-between items-center shrink-0">
+                    {onDelete ? (
+                        <button
+                            onClick={handleDeleteClick}
+                            className="text-red-500 hover:text-red-700 text-sm font-medium px-2 py-1 hover:bg-red-50 rounded transition-colors"
+                        >
+                            삭제하기
+                        </button>
+                    ) : <div></div>}
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={handleSaveWithLogic}
+                            disabled={isLoading || isUploading || isBgmUploading}
+                            className="px-6 py-2 bg-brand-purple text-white rounded-lg hover:bg-indigo-600 font-medium transition shadow-sm disabled:opacity-50"
+                        >
+                            {isLoading ? '저장 중...' : '저장'}
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="프로젝트 삭제"
+                message={`정말로 '${book.title}' 프로젝트를 삭제하시겠습니까?\n이 작업은 복구할 수 없습니다.`}
+                confirmText="삭제하기"
+                isDangerous={true}
+            />
         </div>
     )
 }

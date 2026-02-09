@@ -53,3 +53,17 @@ body {
 .rotate-y-90 {
   transform: rotateY(90deg);
 }
+
+/* Flipbook Interaction Fixes */
+.book-locked .stf__outerShadow,
+.book-locked .stf__innerShadow,
+.book-locked .stf__hardCorner,
+.book-locked .flip-book-corner {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Ensure our page content stays above during edit mode */
+.book-locked .stf__item {
+  z-index: 100 !important;
+}

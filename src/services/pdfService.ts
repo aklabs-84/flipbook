@@ -1,44 +1,57 @@
-import * as pdfjsLib from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 
 // Configure worker
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export const convertPDFToImages = async (file: File): Promise<Blob[]> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const pageCount = pdf.numPages;
-    const images: Blob[] = [];
+    try {
+        const arrayBuffer = await file.arrayBuffer();
 
-    for (let i = 1; i <= pageCount; i++) {
-        const page = await pdf.getPage(i);
-
-        // Determine scale (Standard quality)
-        const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for better quality
-
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-
-        if (!context) continue;
-
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        const renderContext = {
-            canvasContext: context,
-            viewport: viewport,
-        } as any;
-
-        await page.render(renderContext).promise;
-
-        const blob = await new Promise<Blob | null>((resolve) => {
-            canvas.toBlob((b) => resolve(b), 'image/webp', 0.85);
+        // Load PDF
+        const loadingTask = getDocument({
+            data: arrayBuffer,
+            cMapUrl: 'https://unpkg.com/pdfjs-dist@4.0.379/cmaps/',
+            cMapPacked: true,
         });
 
-        if (blob) {
-            images.push(blob);
-        }
-    }
+        const pdf = await loadingTask.promise;
+        const pageCount = pdf.numPages;
+        const images: Blob[] = [];
 
-    return images;
+        console.log(`PDF Loaded. Pages: ${pageCount}`);
+
+        for (let i = 1; i <= pageCount; i++) {
+            const page = await pdf.getPage(i);
+
+            // Determine scale (Standard quality)
+            const viewport = page.getViewport({ scale: 2.0 }); // 2x scale
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            if (!context) continue;
+
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport,
+            }).promise;
+
+            const blob = await new Promise<Blob | null>((resolve) => {
+                canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.85); // Use JPEG for better compression/speed
+            });
+
+            if (blob) {
+                images.push(blob);
+            }
+        }
+
+        return images;
+    } catch (error) {
+        console.error("PDF Conversion Error:", error);
+        throw error;
+    }
 };

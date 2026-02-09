@@ -10,8 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/postgrest-js": "^2.95.3",
+    "@supabase/supabase-js": "^2.95.3",
+    "@types/fabric": "^5.3.11",
     "clsx": "^2.1.0",
+    "fabric": "^7.1.0",
+    "framer-motion": "^12.33.0",
     "howler": "^2.2.4",
     "lucide-react": "^0.563.0",
     "pdfjs-dist": "^4.0.0",
