@@ -20,6 +20,7 @@ export interface Database {
                     is_public: boolean
                     cover_url: string | null
                     bgm_url: string | null // Added bgm_url
+                    author: string | null
                     created_at: string
                     updated_at: string
                 }
@@ -33,6 +34,7 @@ export interface Database {
                     is_public?: boolean
                     cover_url?: string | null
                     bgm_url?: string | null
+                    author?: string | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -46,6 +48,7 @@ export interface Database {
                     is_public?: boolean
                     cover_url?: string | null
                     bgm_url?: string | null
+                    author?: string | null
                     created_at?: string
                     updated_at?: string
                 }

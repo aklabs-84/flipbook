@@ -32,6 +32,7 @@ interface BookState {
     isPublic: boolean
     coverUrl: string | null
     bgmUrl: string | null
+    author: string | null
     createdAt: string | null // Added createdAt
 
 
@@ -54,7 +55,7 @@ interface BookState {
     deleteBook: (bookId: string) => Promise<void>
     updateBookTitle: (bookId: string, newTitle: string) => Promise<void>
 
-    updateBookSettings: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null }) => Promise<void>
+    updateBookSettings: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null, author?: string | null }) => Promise<void>
 
     fetchBookDetails: (bookId: string, preservePage?: boolean) => Promise<void>
     updatePage: (pageId: string, updates: Partial<Page>) => void
@@ -76,6 +77,7 @@ export const useBookStore = create<BookState>((set, get) => ({
     isPublic: false,
     coverUrl: null,
     bgmUrl: null,
+    author: null,
     createdAt: null,
 
 
@@ -126,6 +128,7 @@ export const useBookStore = create<BookState>((set, get) => ({
         isPublic: false,
         coverUrl: null,
         bgmUrl: null,
+        author: null,
         createdAt: null
     }),
 
@@ -508,13 +511,18 @@ export const useBookStore = create<BookState>((set, get) => ({
             updates.bgm_url = settings.bgmUrl
         }
 
+        if (settings.author !== undefined) {
+            updates.author = settings.author
+        }
+
         // Optimistic Update
         set((state) => ({
             ...state,
             isPublic: settings.isPublic,
             passwordHash: settings.password !== undefined ? settings.password : state.passwordHash,
             coverUrl: settings.coverUrl !== undefined ? settings.coverUrl : state.coverUrl,
-            bgmUrl: settings.bgmUrl !== undefined ? settings.bgmUrl : state.bgmUrl
+            bgmUrl: settings.bgmUrl !== undefined ? settings.bgmUrl : state.bgmUrl,
+            author: settings.author !== undefined ? settings.author : state.author
         }))
 
         const { error } = await supabase
@@ -565,6 +573,7 @@ export const useBookStore = create<BookState>((set, get) => ({
             isPublic: book.is_public,
             coverUrl: book.cover_url,
             bgmUrl: book.bgm_url,
+            author: book.author,
             createdAt: book.created_at
         })
     },

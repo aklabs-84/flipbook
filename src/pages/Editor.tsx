@@ -9,6 +9,7 @@ import Book from '../components/Book'
 import Modal from '../components/Modal'
 import AudioController from '../components/AudioController'
 import PageManagerModal from '../components/PageManagerModal'
+import ShareCardModal from '../components/ShareCardModal'
 import { useAudio } from '../hooks/useAudio'
 import { Database } from '../types/supabase'
 
@@ -75,6 +76,7 @@ export default function Editor() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [targetPageSide, setTargetPageSide] = useState<'left' | 'right' | null>(null)
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+    const [isShareCardOpen, setIsShareCardOpen] = useState(false)
     const [isPageMenuOpen, setIsPageMenuOpen] = useState(false)
     const [uploadType, setUploadType] = useState<'page' | 'cover' | 'bgm'>('page')
     const [canvasCommand, setCanvasCommand] = useState<{ type: string; payload?: any; timestamp: number } | null>(null)
@@ -403,26 +405,7 @@ export default function Editor() {
             return
         }
 
-        const shareUrl = `${window.location.origin}/view/${bookId}`
-        try {
-            await navigator.clipboard.writeText(shareUrl)
-            setModalConfig({
-                isOpen: true,
-                type: 'success',
-                title: '링크 복사 완료! 🎉',
-                message: `공유 링크가 클립보드에 복사되었습니다!\n${shareUrl}`,
-                action: 'info'
-            })
-        } catch (err) {
-            console.error('Failed to copy:', err)
-            setModalConfig({
-                isOpen: true,
-                type: 'danger',
-                title: '복사 실패',
-                message: '링크 복사에 실패했습니다.',
-                action: 'info'
-            })
-        }
+        setIsShareCardOpen(true)
     }
 
     return (
@@ -962,6 +945,19 @@ export default function Editor() {
             >
                 <div className="whitespace-pre-line">{modalConfig.message}</div>
             </Modal>
+
+            {bookId && (
+                <ShareCardModal
+                    isOpen={isShareCardOpen}
+                    onClose={() => setIsShareCardOpen(false)}
+                    book={{
+                        id: bookId,
+                        title,
+                        author: useBookStore.getState().author,
+                        cover_url: useBookStore.getState().coverUrl
+                    }}
+                />
+            )}
         </div >
     )
 }

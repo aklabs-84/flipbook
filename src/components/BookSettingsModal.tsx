@@ -10,12 +10,13 @@ interface BookSettingsModalProps {
     isOpen: boolean
     onClose: () => void
     book: BookRow
-    onSave: (bookId: string, settings: { title: string, isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null }) => Promise<void>
+    onSave: (bookId: string, settings: { title: string, isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null, author?: string | null }) => Promise<void>
     onDelete?: (bookId: string) => Promise<void>
 }
 
 export default function BookSettingsModal({ isOpen, onClose, book, onSave, onDelete }: BookSettingsModalProps) {
     const [title, setTitle] = useState(book.title)
+    const [author, setAuthor] = useState(book.author || '')
     const [isPublic, setIsPublic] = useState(book.is_public)
     const [password, setPassword] = useState('')
     const [hasPassword, setHasPassword] = useState(!!book.password_hash)
@@ -33,6 +34,7 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave, onDel
     useEffect(() => {
         if (isOpen) {
             setTitle(book.title)
+            setAuthor(book.author || '')
             setIsPublic(book.is_public)
             setHasPassword(!!book.password_hash)
             setPassword('')
@@ -58,11 +60,12 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave, onDel
         }
 
         setIsLoading(true)
-        const updates: { title: string, isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null } = {
+        const updates: { title: string, isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null, author?: string | null } = {
             title,
             isPublic,
             coverUrl,
-            bgmUrl
+            bgmUrl,
+            author: author.trim() || null
         }
 
         if (password) {
@@ -160,6 +163,18 @@ export default function BookSettingsModal({ isOpen, onClose, book, onSave, onDel
                             onChange={(e) => setTitle(e.target.value)}
                             className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 outline-none text-lg font-bold text-gray-800 placeholder-gray-300"
                             placeholder="프로젝트 이름을 입력하세요"
+                        />
+                    </div>
+
+                    {/* Author Section */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-800 mb-2">저자 이름</label>
+                        <input
+                            type="text"
+                            value={author}
+                            onChange={(e) => setAuthor(e.target.value)}
+                            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 outline-none text-gray-800 placeholder-gray-300"
+                            placeholder="저자 이름을 입력하세요 (공유 카드에 표시됩니다)"
                         />
                     </div>
 

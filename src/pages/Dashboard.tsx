@@ -9,6 +9,7 @@ import CreationModal from '../components/CreationModal'
 import ImageUploadModal from '../components/ImageUploadModal'
 import TitleInputModal from '../components/TitleInputModal'
 import Modal from '../components/Modal'
+import ShareCardModal from '../components/ShareCardModal'
 
 import { Share2 } from 'lucide-react'
 
@@ -48,6 +49,7 @@ export default function Dashboard() {
         message: string
         type: 'success' | 'danger' | 'default'
     }>({ isOpen: false, title: '', message: '', type: 'default' })
+    const [shareCardBook, setShareCardBook] = useState<BookRow | null>(null)
 
     useEffect(() => {
         if (!isInitialized) return
@@ -242,7 +244,7 @@ export default function Dashboard() {
         setSettingsModalOpen(true)
     }
 
-    const handleSaveSettings = async (bookId: string, settings: { title: string, isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null }) => {
+    const handleSaveSettings = async (bookId: string, settings: { title: string, isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null, author?: string | null }) => {
         // Update title if changed
         const currentBook = books.find(b => b.id === bookId)
         if (currentBook && currentBook.title !== settings.title) {
@@ -260,7 +262,8 @@ export default function Dashboard() {
                     is_public: settings.isPublic,
                     password_hash: settings.password !== undefined ? settings.password : b.password_hash,
                     cover_url: settings.coverUrl !== undefined ? settings.coverUrl : b.cover_url,
-                    bgm_url: settings.bgmUrl !== undefined ? settings.bgmUrl : b.bgm_url
+                    bgm_url: settings.bgmUrl !== undefined ? settings.bgmUrl : b.bgm_url,
+                    author: settings.author !== undefined ? settings.author : b.author
                 }
             }
             return b
@@ -281,24 +284,7 @@ export default function Dashboard() {
             return
         }
 
-        const shareUrl = `${window.location.origin}/view/${book.id}`
-        try {
-            await navigator.clipboard.writeText(shareUrl)
-            setShareModal({
-                isOpen: true,
-                title: '링크 복사 완료! 🎉',
-                message: `공유 링크가 클립보드에 복사되었습니다!\n${shareUrl}`,
-                type: 'success'
-            })
-        } catch (err) {
-            console.error('Failed to copy:', err)
-            setShareModal({
-                isOpen: true,
-                title: '복사 실패',
-                message: '링크 복사에 실패했습니다.',
-                type: 'danger'
-            })
-        }
+        setShareCardBook(book)
     }
 
     return (
@@ -496,6 +482,20 @@ export default function Dashboard() {
                 >
                     <p className="whitespace-pre-wrap">{shareModal.message}</p>
                 </Modal>
+
+                {/* Share Card Modal */}
+                {shareCardBook && (
+                    <ShareCardModal
+                        isOpen={!!shareCardBook}
+                        onClose={() => setShareCardBook(null)}
+                        book={{
+                            id: shareCardBook.id,
+                            title: shareCardBook.title,
+                            author: shareCardBook.author,
+                            cover_url: shareCardBook.cover_url
+                        }}
+                    />
+                )}
             </div>
         </div>
     )
