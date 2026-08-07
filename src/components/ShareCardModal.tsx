@@ -39,7 +39,7 @@ export default function ShareCardModal({ isOpen, onClose, book }: ShareCardModal
         if (!cardRef.current) return
         try {
             setIsDownloading(true)
-            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 })
+            const dataUrl = await toPng(cardRef.current, { pixelRatio: 2 })
             const link = document.createElement('a')
             link.download = `${book.title || 'flipbook'}-share-card.png`
             link.href = dataUrl
@@ -119,8 +119,8 @@ export default function ShareCardModal({ isOpen, onClose, book }: ShareCardModal
                                             {book.author}
                                         </div>
                                     )}
-                                    <div className="flex items-center" style={{ marginTop: 16, gap: 10, flexShrink: 0 }}>
-                                        <div className="flex items-center justify-center" style={{ width: 32, height: 32, background: '#fff', border: '1px solid #C9BFA0', flexShrink: 0 }}>
+                                    <div className="flex items-center" style={{ marginTop: 14, gap: 12, flexShrink: 0 }}>
+                                        <div className="flex items-center justify-center" style={{ width: 56, height: 56, background: '#fff', border: '1px solid #C9BFA0', flexShrink: 0 }}>
                                             {qrDataUrl && <img src={qrDataUrl} alt="QR Code" className="w-full h-full" />}
                                         </div>
                                         <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#A69D84', textTransform: 'uppercase' }}>Scan to Read</div>
@@ -156,7 +156,7 @@ export default function ShareCardModal({ isOpen, onClose, book }: ShareCardModal
                                                 {book.author}
                                             </div>
                                         ) : <div />}
-                                        <div className="flex items-center justify-center" style={{ width: 36, height: 36, background: 'rgba(245,241,230,0.94)', flexShrink: 0 }}>
+                                        <div className="flex items-center justify-center" style={{ width: 56, height: 56, background: 'rgba(245,241,230,0.94)', flexShrink: 0 }}>
                                             {qrDataUrl && <img src={qrDataUrl} alt="QR Code" className="w-full h-full" />}
                                         </div>
                                     </div>
