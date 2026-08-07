@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useBookStore } from '../store/bookStore'
 import { useUIStore } from '../store/uiStore'
+import { useIsMobile } from '../hooks/useResponsive'
 import Page from './Page'
 import { StorybookPage } from './StorybookPage'
 
@@ -37,6 +38,10 @@ export default function Book({ onUpdateLayers, onPageClick, command, isLocked, o
     } = useBookStore()
 
     const { scale, showPageNumbers } = useUIStore()
+    const isMobile = useIsMobile()
+    // Which half of the current leaf is showing on mobile's single-page view
+    const [mobileSide, setMobileSide] = useState<'left' | 'right'>('left')
+    const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
     // --- Data Normalization ---
     const allPages = useMemo(() => {
@@ -112,6 +117,78 @@ export default function Book({ onUpdateLayers, onPageClick, command, isLocked, o
 
     const leftPageData = leftPageIndex >= 0 ? allPages[leftPageIndex] : null
     const rightPageData = rightPageIndex < allPages.length ? allPages[rightPageIndex] : null
+
+    // Mobile page-by-page content: which single page to show for the current leaf
+    const mobileSingleContent: BookPageData | null = isMobile
+        ? (currentLeaf === 0
+            ? allPages[0]
+            : currentLeaf >= maxLeaf
+                ? leftPageData
+                : (mobileSide === 'left' ? leftPageData : rightPageData))
+        : null
+
+    const goToNextView = () => {
+        if (isMobile) {
+            if (currentLeaf === 0) {
+                flipTo(1)
+                setMobileSide('left')
+            } else if (currentLeaf >= maxLeaf) {
+                return
+            } else if (mobileSide === 'left') {
+                setMobileSide('right')
+            } else {
+                flipTo(currentLeaf + 1)
+                setMobileSide('left')
+            }
+        } else {
+            flipTo(Math.min(maxLeaf, currentLeaf + 1))
+        }
+        onFlipPage?.()
+    }
+
+    const goToPrevView = () => {
+        if (isMobile) {
+            if (currentLeaf === 0) {
+                return
+            } else if (currentLeaf >= maxLeaf) {
+                const prevLeaf = maxLeaf - 1
+                flipTo(prevLeaf)
+                setMobileSide(prevLeaf === 0 ? 'left' : 'right')
+            } else if (mobileSide === 'right') {
+                setMobileSide('left')
+            } else {
+                const prevLeaf = currentLeaf - 1
+                flipTo(prevLeaf)
+                setMobileSide(prevLeaf === 0 ? 'left' : 'right')
+            }
+        } else {
+            flipTo(Math.max(0, currentLeaf - 1))
+        }
+        onFlipPage?.()
+    }
+
+    const SWIPE_ENABLED = isMobile && isLocked
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (!SWIPE_ENABLED) return
+        const touch = e.touches[0]
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+    }
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (!SWIPE_ENABLED || !touchStartRef.current) return
+        const touch = e.changedTouches[0]
+        const dx = touch.clientX - touchStartRef.current.x
+        const dy = touch.clientY - touchStartRef.current.y
+        touchStartRef.current = null
+
+        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return
+        if (dx < 0) {
+            goToNextView()
+        } else {
+            goToPrevView()
+        }
+    }
 
     const renderPageContent = (pageData: BookPageData | null) => {
         if (!pageData) return <div className="w-full h-full bg-transparent" />
@@ -274,6 +351,8 @@ export default function Book({ onUpdateLayers, onPageClick, command, isLocked, o
 
     }
 
+    const isSingleView = isMobile || currentLeaf === 0 || currentLeaf === maxLeaf
+
     return (
         <div
             className="relative flex items-center justify-center w-full h-full select-none group"
@@ -281,15 +360,14 @@ export default function Book({ onUpdateLayers, onPageClick, command, isLocked, o
                 transform: `scale(${scale})`,
                 transition: 'transform 0.3s'
             }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
         >
-            {/* Navigation Controls - Visible only on hover */}
+            {/* Navigation Controls - Always visible on mobile, hover-reveal on desktop */}
             <button
-                onClick={() => {
-                    flipTo(Math.max(0, currentLeaf - 1))
-                    onFlipPage?.()
-                }}
+                onClick={goToPrevView}
                 disabled={currentLeaf === 0}
-                className={`absolute left-4 top-1/2 -translate-y-1/2 z-[200] p-3 rounded-full bg-white/50 backdrop-blur-sm hover:bg-white/90 shadow-lg border border-gray-100 text-gray-700 hover:text-brand-orange hover:scale-110 active:scale-95 transition-all opacity-0 group-hover:opacity-100 duration-300 outline-none
+                className={`absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-[200] p-3 rounded-full bg-white/70 md:bg-white/50 backdrop-blur-sm hover:bg-white/90 shadow-lg border border-gray-100 text-gray-700 hover:text-brand-orange hover:scale-110 active:scale-95 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 duration-300 outline-none
                     ${currentLeaf === 0 ? 'pointer-events-none hidden' : ''}
                 `}
                 title="Previous Page"
@@ -298,12 +376,9 @@ export default function Book({ onUpdateLayers, onPageClick, command, isLocked, o
             </button>
 
             <button
-                onClick={() => {
-                    flipTo(Math.min(maxLeaf, currentLeaf + 1))
-                    onFlipPage?.()
-                }}
+                onClick={goToNextView}
                 disabled={currentLeaf >= maxLeaf}
-                className={`absolute right-4 top-1/2 -translate-y-1/2 z-[200] p-3 rounded-full bg-white/50 backdrop-blur-sm hover:bg-white/90 shadow-lg border border-gray-100 text-gray-700 hover:text-brand-orange hover:scale-110 active:scale-95 transition-all opacity-0 group-hover:opacity-100 duration-300 outline-none
+                className={`absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-[200] p-3 rounded-full bg-white/70 md:bg-white/50 backdrop-blur-sm hover:bg-white/90 shadow-lg border border-gray-100 text-gray-700 hover:text-brand-orange hover:scale-110 active:scale-95 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 duration-300 outline-none
                     ${currentLeaf >= maxLeaf ? 'pointer-events-none hidden' : ''}
                 `}
                 title="Next Page"
@@ -313,20 +388,20 @@ export default function Book({ onUpdateLayers, onPageClick, command, isLocked, o
 
             {/* Book Spread - Adaptive Layout */}
             <div
-                className={`relative flex items-center shadow-2xl rounded-sm overflow-hidden bg-[#fdfbf7] transition-all duration-300
-                    ${(currentLeaf === 0 || currentLeaf === maxLeaf) ? 'justify-center' : 'justify-center'}
-                `}
+                className="relative flex items-center justify-center shadow-2xl rounded-sm overflow-hidden bg-[#fdfbf7] transition-all duration-300"
                 style={{
-                    width: (currentLeaf === 0 || currentLeaf === maxLeaf) ? PAGE_WIDTH : PAGE_WIDTH * 2,
+                    width: isSingleView ? PAGE_WIDTH : PAGE_WIDTH * 2,
                     height: PAGE_HEIGHT
                 }}
             >
-                {/* Single Page View (Front/Back Cover) */}
-                {(currentLeaf === 0 || currentLeaf === maxLeaf) ? (
+                {/* Single Page View (Mobile, or Front/Back Cover) */}
+                {isSingleView ? (
                     <div className="w-full h-full relative shadow-md">
-                        {currentLeaf === 0
-                            ? renderPageContent(allPages[0]) // Front Cover
-                            : renderPageContent(allPages[leftPageIndex]) // Back Cover (Left Side of last leaf)
+                        {isMobile
+                            ? renderPageContent(mobileSingleContent) // One page at a time on mobile
+                            : currentLeaf === 0
+                                ? renderPageContent(allPages[0]) // Front Cover
+                                : renderPageContent(allPages[leftPageIndex]) // Back Cover (Left Side of last leaf)
                         }
                     </div>
                 ) : (

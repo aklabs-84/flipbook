@@ -72,9 +72,9 @@ export default function ShareCardModal({ isOpen, onClose, book }: ShareCardModal
                     </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto flex flex-col items-center gap-5">
+                <div className="p-4 sm:p-6 overflow-y-auto flex flex-col items-center gap-5">
                     {/* Style Selector */}
-                    <div className="flex gap-2 w-[300px]">
+                    <div className="flex gap-2 w-full max-w-[300px]">
                         <button
                             onClick={() => setCardStyle('literary')}
                             className={`flex-1 py-2 rounded-lg text-xs font-bold border transition ${cardStyle === 'literary' ? 'bg-earth-brown text-white border-earth-brown' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
@@ -90,7 +90,7 @@ export default function ShareCardModal({ isOpen, onClose, book }: ShareCardModal
                     </div>
 
                     {/* Card Preview (also used as the export target) */}
-                    <div ref={cardRef} className="w-[300px] shrink-0" style={{ aspectRatio: '2 / 3' }}>
+                    <div ref={cardRef} className="w-full max-w-[300px] shrink-0" style={{ aspectRatio: '2 / 3' }}>
                         {cardStyle === 'literary' ? (
                             <div
                                 className="w-full h-full"

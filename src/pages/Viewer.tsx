@@ -47,7 +47,7 @@ export default function Viewer() {
         toggleTypewriter
     } = useAudio()
 
-    useResponsiveBook()
+    useResponsiveBook({ mobileHeaderOffset: 64 })
 
     useEffect(() => {
         resetBook()
@@ -141,34 +141,35 @@ export default function Viewer() {
             <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#F39233 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
 
             {/* Minimal Header */}
-            <header className="absolute top-0 left-0 right-0 h-20 flex items-start pt-6 px-6 justify-between z-10 pointer-events-none">
-                <div className="pointer-events-auto flex items-center gap-2">
+            <header className="absolute top-0 left-0 right-0 h-14 md:h-20 flex items-start pt-3 md:pt-6 px-3 md:px-6 justify-between z-10 pointer-events-none">
+                <div className="pointer-events-auto flex items-center gap-1.5 md:gap-2 min-w-0">
                     <Link
                         to={user ? '/dashboard' : '/gallery'}
-                        className="group flex items-center gap-2 bg-white/80 backdrop-blur-md border border-white/50 px-4 py-2 rounded-2xl shadow-sm hover:shadow-md hover:bg-white transition-all text-earth-brown hover:text-carrot-orange"
+                        className="group flex items-center gap-1.5 md:gap-2 bg-white/80 backdrop-blur-md border border-white/50 px-2.5 md:px-4 py-1.5 md:py-2 rounded-2xl shadow-sm hover:shadow-md hover:bg-white transition-all text-earth-brown hover:text-carrot-orange shrink-0"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                         </svg>
-                        <span className="font-bold text-sm">나가기</span>
+                        <span className="font-bold text-xs md:text-sm">나가기</span>
                     </Link>
                     {!user && (
                         <Link
                             to="/login"
                             state={{ from: `/view/${bookId}` }}
-                            className="flex items-center gap-2 bg-brand-purple text-white px-4 py-2 rounded-2xl shadow-sm hover:shadow-md hover:bg-indigo-600 transition-all text-sm font-bold"
+                            className="flex items-center gap-1.5 md:gap-2 bg-brand-purple text-white px-2.5 md:px-4 py-1.5 md:py-2 rounded-2xl shadow-sm hover:shadow-md hover:bg-indigo-600 transition-all text-xs md:text-sm font-bold truncate"
                         >
-                            회원가입하고 더 보기
+                            <span className="hidden sm:inline">회원가입하고 더 보기</span>
+                            <span className="sm:hidden">회원가입</span>
                         </Link>
                     )}
                 </div>
 
                 {/* Title */}
-                <h1 className="font-bold text-earth-brown bg-white/80 backdrop-blur-md border border-white/50 px-6 py-2 rounded-2xl shadow-sm text-sm pointer-events-auto opacity-0 hover:opacity-100 transition-opacity translate-y-[-10px] hover:translate-y-0 duration-300">
+                <h1 className="hidden md:block font-bold text-earth-brown bg-white/80 backdrop-blur-md border border-white/50 px-6 py-2 rounded-2xl shadow-sm text-sm pointer-events-auto opacity-0 hover:opacity-100 transition-opacity translate-y-[-10px] hover:translate-y-0 duration-300">
                     {title}
                 </h1>
 
-                <div className="pointer-events-auto">
+                <div className="pointer-events-auto shrink-0">
                     <AudioController
                         isMuted={isMuted}
                         toggleMute={toggleMute}
@@ -256,7 +257,7 @@ export default function Viewer() {
             </Modal>
 
             {/* Book Stage */}
-            <main className="flex-1 flex items-center justify-center relative perspective-3000 overflow-hidden">
+            <main className="flex-1 flex items-center justify-center relative perspective-3000 overflow-hidden pt-16 md:pt-0">
                 <div className="relative transform-style-3d transition-transform duration-300 drop-shadow-2xl">
                     <Book
                         onFlipPage={playPageFlip}
