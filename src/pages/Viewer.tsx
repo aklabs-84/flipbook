@@ -27,6 +27,7 @@ export default function Viewer() {
     const [isAuthorized, setIsAuthorized] = useState(false)
     const [isCheckingAuth, setIsCheckingAuth] = useState(true)
     const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+    const [notFound, setNotFound] = useState(false)
 
     const {
         playPageFlip,
@@ -52,9 +53,10 @@ export default function Viewer() {
         resetBook()
         if (bookId) {
             setLoading(true)
-            fetchBookDetails(bookId).then(() => {
+            fetchBookDetails(bookId).then((ok) => {
                 setLoading(false)
                 setIsCheckingAuth(false)
+                if (!ok) setNotFound(true)
             })
         } else {
             initDummyData()
@@ -77,32 +79,24 @@ export default function Viewer() {
         }
     }, [passwordHash, isCheckingAuth])
 
-    // --- Auth Check ---
     const { user } = useAuthStore()
 
-    // If not logged in, show Login Gate
-    if (!user) {
+    // Book not found, or private and viewer isn't the owner
+    if (!isCheckingAuth && notFound) {
         return (
             <div className="h-screen w-full flex items-center justify-center bg-warm-cream font-sans text-earth-brown p-4">
                 <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border-4 border-mustard-yellow/20">
-                    <div className="text-6xl mb-6 animate-bounce">🔐</div>
-                    <h2 className="text-2xl font-black mb-2 text-earth-brown">로그인이 필요해요</h2>
+                    <div className="text-6xl mb-6">📕</div>
+                    <h2 className="text-2xl font-black mb-2 text-earth-brown">작품을 찾을 수 없어요</h2>
                     <p className="text-earth-brown/70 mb-8 font-medium">
-                        이 책은 작가님의 소중한 작품입니다.<br />
-                        로그인하고 상상의 세계를 감상해보세요!
+                        비공개 작품이거나, 링크가 잘못되었거나<br />
+                        삭제된 작품일 수 있어요.
                     </p>
                     <Link
-                        to="/login"
-                        state={{ from: `/view/${bookId}` }}
+                        to="/gallery"
                         className="block w-full py-4 bg-brand-purple text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:bg-indigo-600 transition-all transform hover:-translate-y-1"
                     >
-                        로그인하러 가기
-                    </Link>
-                    <Link
-                        to="/gallery"
-                        className="block mt-4 text-sm text-earth-brown/50 hover:text-earth-brown font-medium underline"
-                    >
-                        전시관으로 돌아가기
+                        전시관으로 가기
                     </Link>
                 </div>
             </div>
@@ -148,9 +142,9 @@ export default function Viewer() {
 
             {/* Minimal Header */}
             <header className="absolute top-0 left-0 right-0 h-20 flex items-start pt-6 px-6 justify-between z-10 pointer-events-none">
-                <div className="pointer-events-auto">
+                <div className="pointer-events-auto flex items-center gap-2">
                     <Link
-                        to="/dashboard"
+                        to={user ? '/dashboard' : '/gallery'}
                         className="group flex items-center gap-2 bg-white/80 backdrop-blur-md border border-white/50 px-4 py-2 rounded-2xl shadow-sm hover:shadow-md hover:bg-white transition-all text-earth-brown hover:text-carrot-orange"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
@@ -158,6 +152,15 @@ export default function Viewer() {
                         </svg>
                         <span className="font-bold text-sm">나가기</span>
                     </Link>
+                    {!user && (
+                        <Link
+                            to="/login"
+                            state={{ from: `/view/${bookId}` }}
+                            className="flex items-center gap-2 bg-brand-purple text-white px-4 py-2 rounded-2xl shadow-sm hover:shadow-md hover:bg-indigo-600 transition-all text-sm font-bold"
+                        >
+                            회원가입하고 더 보기
+                        </Link>
+                    )}
                 </div>
 
                 {/* Title */}

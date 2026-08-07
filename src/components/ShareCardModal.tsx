@@ -14,11 +14,14 @@ interface ShareCardModalProps {
     }
 }
 
+type CardStyle = 'literary' | 'photo'
+
 export default function ShareCardModal({ isOpen, onClose, book }: ShareCardModalProps) {
     const cardRef = useRef<HTMLDivElement>(null)
     const [qrDataUrl, setQrDataUrl] = useState<string>('')
     const [isDownloading, setIsDownloading] = useState(false)
     const [copied, setCopied] = useState(false)
+    const [cardStyle, setCardStyle] = useState<CardStyle>('literary')
 
     const shareUrl = `${window.location.origin}/view/${book.id}`
 
@@ -70,37 +73,96 @@ export default function ShareCardModal({ isOpen, onClose, book }: ShareCardModal
                 </div>
 
                 <div className="p-6 overflow-y-auto flex flex-col items-center gap-5">
+                    {/* Style Selector */}
+                    <div className="flex gap-2 w-[300px]">
+                        <button
+                            onClick={() => setCardStyle('literary')}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold border transition ${cardStyle === 'literary' ? 'bg-earth-brown text-white border-earth-brown' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                        >
+                            리터러리 문고본
+                        </button>
+                        <button
+                            onClick={() => setCardStyle('photo')}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold border transition ${cardStyle === 'photo' ? 'bg-earth-brown text-white border-earth-brown' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                        >
+                            인디 포토 진
+                        </button>
+                    </div>
+
                     {/* Card Preview (also used as the export target) */}
-                    <div
-                        ref={cardRef}
-                        className="w-[300px] bg-white flex flex-col items-center px-6 py-8 gap-5 shrink-0"
-                        style={{ fontFamily: 'sans-serif' }}
-                    >
-                        <div className="w-40 h-56 rounded-lg overflow-hidden bg-gray-100 shadow-md shrink-0">
-                            {book.cover_url ? (
-                                <img
-                                    src={book.cover_url}
-                                    alt={book.title}
-                                    crossOrigin="anonymous"
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Cover</div>
-                            )}
-                        </div>
-
-                        <div className="text-center">
-                            <div className="font-bold text-lg text-earth-brown break-words">{book.title}</div>
-                            {book.author && (
-                                <div className="text-sm text-gray-500 mt-1">{book.author}</div>
-                            )}
-                        </div>
-
-                        {qrDataUrl && (
-                            <img src={qrDataUrl} alt="QR Code" className="w-32 h-32" />
+                    <div ref={cardRef} className="w-[300px] shrink-0" style={{ aspectRatio: '2 / 3' }}>
+                        {cardStyle === 'literary' ? (
+                            <div
+                                className="w-full h-full"
+                                style={{ display: 'grid', gridTemplateColumns: '10px 1fr', background: '#F4EEDE', borderRadius: '3px', overflow: 'hidden' }}
+                            >
+                                <div style={{ background: '#A23B2E' }} />
+                                <div className="flex flex-col items-center" style={{ padding: '24px 22px 18px' }}>
+                                    <div style={{ width: '74%', aspectRatio: '3 / 4', overflow: 'hidden', flexShrink: 0, boxShadow: '0 1px 0 rgba(0,0,0,0.06)', background: '#EFE9D8' }}>
+                                        {book.cover_url ? (
+                                            <img
+                                                src={book.cover_url}
+                                                alt={book.title}
+                                                crossOrigin="anonymous"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-[10px]">No Cover</div>
+                                        )}
+                                    </div>
+                                    <div style={{ width: 34, height: 1, background: '#C9BFA0', margin: '14px 0 10px', flexShrink: 0 }} />
+                                    <div style={{ fontFamily: "'Nanum Myeongjo', 'Noto Serif KR', serif", fontSize: 18, fontWeight: 800, color: '#2B2620', textAlign: 'center', lineHeight: 1.35, flexShrink: 0 }}>
+                                        {book.title}
+                                    </div>
+                                    {book.author && (
+                                        <div style={{ marginTop: 7, fontSize: 11.5, letterSpacing: '0.12em', color: '#7A7360', flexShrink: 0 }}>
+                                            {book.author}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center" style={{ marginTop: 16, gap: 10, flexShrink: 0 }}>
+                                        <div className="flex items-center justify-center" style={{ width: 32, height: 32, background: '#fff', border: '1px solid #C9BFA0', flexShrink: 0 }}>
+                                            {qrDataUrl && <img src={qrDataUrl} alt="QR Code" className="w-full h-full" />}
+                                        </div>
+                                        <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#A69D84', textTransform: 'uppercase' }}>Scan to Read</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="w-full h-full" style={{ position: 'relative', borderRadius: '3px', overflow: 'hidden', background: '#12110F' }}>
+                                <div style={{ position: 'absolute', inset: 0 }}>
+                                    {book.cover_url ? (
+                                        <img
+                                            src={book.cover_url}
+                                            alt={book.title}
+                                            crossOrigin="anonymous"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px]">No Cover</div>
+                                    )}
+                                </div>
+                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,9,7,0) 38%, rgba(10,9,7,0.55) 62%, rgba(8,7,6,0.94) 100%)' }} />
+                                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '20px 20px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                    <div style={{ width: 22, height: 3, background: '#6E93A0' }} />
+                                    <div style={{ fontFamily: "'Black Han Sans', 'Apple SD Gothic Neo', sans-serif", fontSize: 25, lineHeight: 1.25, color: '#F5F1E6' }}>
+                                        {book.title}
+                                    </div>
+                                    <div className="flex items-end justify-between" style={{ gap: 12 }}>
+                                        {book.author ? (
+                                            <div style={{ fontSize: 12, color: '#C7C0AD' }}>
+                                                <span style={{ display: 'block', fontSize: 9.5, letterSpacing: '0.16em', color: '#6E93A0', textTransform: 'uppercase', marginBottom: 4 }}>
+                                                    Author
+                                                </span>
+                                                {book.author}
+                                            </div>
+                                        ) : <div />}
+                                        <div className="flex items-center justify-center" style={{ width: 36, height: 36, background: 'rgba(245,241,230,0.94)', flexShrink: 0 }}>
+                                            {qrDataUrl && <img src={qrDataUrl} alt="QR Code" className="w-full h-full" />}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         )}
-
-                        <div className="text-[11px] text-gray-400 tracking-wide">SCAN TO READ</div>
                     </div>
 
                     <div className="flex gap-3 w-full">

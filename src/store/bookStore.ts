@@ -57,7 +57,7 @@ interface BookState {
 
     updateBookSettings: (bookId: string, settings: { isPublic: boolean, password?: string | null, coverUrl?: string | null, bgmUrl?: string | null, author?: string | null }) => Promise<void>
 
-    fetchBookDetails: (bookId: string, preservePage?: boolean) => Promise<void>
+    fetchBookDetails: (bookId: string, preservePage?: boolean) => Promise<boolean>
     updatePage: (pageId: string, updates: Partial<Page>) => void
     savePageChanges: (pageId: string, updates: Partial<Page>) => Promise<void>
     deletePage: (pageId: string) => Promise<void> // Added deletePage
@@ -546,7 +546,7 @@ export const useBookStore = create<BookState>((set, get) => ({
 
         if (bookError) {
             console.error('Error fetching book:', bookError)
-            return
+            return false
         }
 
         // 2. Fetch Pages
@@ -558,7 +558,7 @@ export const useBookStore = create<BookState>((set, get) => ({
 
         if (pageError) {
             console.error('Error fetching pages:', pageError)
-            return
+            return false
         }
 
         const state = get()
@@ -576,6 +576,7 @@ export const useBookStore = create<BookState>((set, get) => ({
             author: book.author,
             createdAt: book.created_at
         })
+        return true
     },
 
 
