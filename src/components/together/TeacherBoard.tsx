@@ -207,7 +207,7 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
                       <div style={{ marginTop: 10 }}>
                         <button className="btn sm" type="button" disabled={busy} onClick={() => void sendBook(r)}>📖 플립북으로 보내기</button>
                         {bookId && sentCode === r.code && (
-                          <a className="btn ghost sm" style={{ marginLeft: 8 }} href={`/edit/${bookId}`} target="_blank" rel="noopener">만든 책 열기</a>
+                          <a className="btn ghost sm" style={{ marginLeft: 8 }} href={`/edit/${bookId}?from=together`} target="_blank" onClick={e => { e.preventDefault(); window.open(`/edit/${bookId}?from=together`, '_blank') }}>만든 책 열기</a>
                         )}
                         {bookId && sentCode === r.code && (
                           <button className="btn ghost sm" style={{ marginLeft: 8 }} type="button" disabled={busy} onClick={() => void showToStudents(r)}>👦 학생들에게 책 보여 주기</button>

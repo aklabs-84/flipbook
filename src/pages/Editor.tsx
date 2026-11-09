@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, BookOpen, ChevronDown, Image as ImageIcon, MousePointer, Pencil, Eraser, Trash2, Cloud, Check, Loader2, Share2 } from 'lucide-react'
 import { useBookStore } from '../store/bookStore'
 import { useUIStore } from '../store/uiStore'
@@ -17,6 +17,13 @@ type PageData = Database['public']['Tables']['pages']['Row']
 
 export default function Editor() {
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
+    const fromTogether = searchParams.get('from') === 'together'
+    const backToTeacher = () => {
+        try { window.opener?.focus() } catch { /* ignore */ }
+        window.close()
+        setTimeout(() => { if (!window.closed) navigate('/together') }, 200)
+    }
     const { bookId } = useParams()
 
     // Book Store
@@ -424,6 +431,14 @@ export default function Editor() {
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
+                    {fromTogether && (
+                        <button
+                            onClick={backToTeacher}
+                            className="px-3 py-1.5 rounded-xl bg-brand-purple text-white text-xs sm:text-sm font-bold whitespace-nowrap hover:opacity-90"
+                        >
+                            ← 선생님 화면으로
+                        </button>
+                    )}
                     <div className="h-6 w-[1.5px] bg-gray-200/50" />
                     <h1 className="text-sm sm:text-base font-bold text-gray-700 truncate max-w-[80px] sm:max-w-xs">
                         {title || '무제 프로젝트'}
