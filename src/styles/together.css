@@ -1,0 +1,189 @@
+/* 함께 쓰는 방 — 시안 A(대화방형) 스타일. 모든 클래스는 .tg 안에서만 쓴다 */
+.tg{
+  --wall:#FBF1DC; --wood:#C98F5A; --ink:#4A3228; --mustard:#F7C844; --grass:#66A844; --tomato:#E8553E;
+  --sky:#BFE0F2; --paper:#FFFDF6; --line:#E7D5B3; --mute:#7C6657; --sub:#7C6657; --accent:#E8553E;
+  --nav-h:64px;
+  min-height:100vh; padding-top:var(--nav-h); background:var(--wall); color:var(--ink);
+  font-family:'Gowun Dodum','Noto Sans KR',system-ui,sans-serif; font-size:17px; line-height:1.6;
+  -webkit-text-size-adjust:100%;
+}
+.tg *{box-sizing:border-box}
+.tg button{font:inherit;color:inherit;cursor:pointer}
+.tg h1,.tg h2{font-family:'Black Han Sans','Gowun Dodum',sans-serif;font-weight:400;margin:6px 0}
+.tg h1{font-size:30px}.tg h2{font-size:26px}
+.tg .sub{color:var(--mute);font-size:15px;margin:0 0 12px}
+.tg .wrap{max-width:760px;margin:0 auto;padding:20px 16px 48px}
+.tg .wrap.wide{max-width:1100px}
+
+/* 입구 화면 */
+.tg .card{background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:22px}
+.tg .fld{display:block;margin:14px 0 4px;font-weight:700}
+.tg input[type=text],.tg input[type=password],.tg input[type=number],.tg select{
+  width:100%;min-height:48px;border:2px solid var(--line);border-radius:8px;padding:8px 12px;background:#fff;color:var(--ink);font:inherit}
+.tg input:focus,.tg textarea:focus,.tg select:focus{outline:3px solid var(--mustard);outline-offset:1px}
+.tg .codein{font-size:30px;letter-spacing:.35em;text-align:center;font-family:'Black Han Sans',sans-serif}
+.tg .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 22px;border:0;border-radius:10px;background:var(--grass);color:#fff;box-shadow:0 4px 0 #4B8531;font-size:18px}
+.tg .btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #4B8531}
+.tg .btn:disabled{background:#B9B09A;box-shadow:0 4px 0 #9a917c;cursor:default}
+.tg .btn.red{background:var(--tomato);box-shadow:0 4px 0 #B63F2C}
+.tg .btn.ghost{background:transparent;color:var(--ink);box-shadow:none;border:2px solid var(--line)}
+.tg .btn.sm{min-height:40px;padding:4px 14px;font-size:15px}
+.tg .err{background:#FFE9E2;border:2px solid var(--tomato);border-radius:10px;padding:8px 12px;margin:10px 0;font-size:15px}
+.tg .link{background:none;border:0;color:var(--mute);text-decoration:underline;min-height:40px;font-size:15px}
+.tg .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* 대화방 전체 틀: 위(이야기)는 안에서 스크롤, 아래(쓰기)는 고정 */
+.tg .room{display:flex;flex-direction:column;overflow:hidden;max-width:1100px;margin:0 auto;padding:10px 16px 0}
+.tg .room h2{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tg .mode{display:inline-block;font-family:'Gowun Dodum',sans-serif;font-size:14px;background:var(--sky);padding:2px 10px;border-radius:6px}
+.tg .cols{display:grid;grid-template-columns:1fr;gap:14px;flex:1;min-height:0}
+.tg .main{display:flex;flex-direction:column;min-height:0}
+.tg .members{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+.tg .mem{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:30px;border:2px solid transparent;font-size:15px}
+.tg .mem i,.tg .msg i{font-style:normal;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:20px;flex:none}
+.tg .mem.turn{border-color:var(--mustard);background:#FFF4CC}
+.tg .mem.me span::after{content:' (나)';color:var(--mute)}
+
+.tg .chat{flex:1;min-height:140px;overflow-y:auto;background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:14px}
+.tg .msg{display:flex;gap:8px;margin:10px 0;align-items:flex-start}
+.tg .msg.me{flex-direction:row-reverse}
+.tg .bub{max-width:78%;padding:8px 12px;border-radius:12px;background:#F3E6CC;word-break:keep-all;overflow-wrap:anywhere}
+.tg .msg.me .bub{background:var(--mustard)}
+.tg .msg .nm{font-size:13px;color:var(--mute)}
+.tg .msg.me .nm{text-align:right}
+.tg .sys{text-align:center;font-size:14px;color:var(--mute);margin:8px 0}
+.tg .fresh{animation:tgpop .6s ease}
+@keyframes tgpop{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+
+/* 새 글 확인 줄 */
+.tg .chk{flex:none;margin:10px 0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:56px}
+.tg .cbtn{background:var(--grass);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-size:18px;box-shadow:0 4px 0 #4B8531;min-width:170px;min-height:48px}
+.tg .cbtn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #4B8531}
+.tg .cbtn:disabled{background:#B9B09A;box-shadow:0 4px 0 #9a917c;cursor:default}
+.tg .cmsg{flex:1;min-width:200px;font-size:16px}
+.tg .cmsg small{display:block;color:var(--mute);font-size:14px}
+.tg .cmsg.warn{color:var(--tomato)}
+.tg .cmsg.good{color:#3F7A28}
+.tg .pen{display:flex;align-items:center;gap:8px}
+.tg .pen svg{width:120px;height:28px;overflow:visible}
+.tg .sq{fill:none;stroke:var(--wood);stroke-width:3;stroke-linecap:round;stroke-dasharray:220;stroke-dashoffset:220;animation:tgdraw 1.4s linear infinite}
+@keyframes tgdraw{0%{stroke-dashoffset:220}70%,100%{stroke-dashoffset:0}}
+.tg .pencil{display:inline-block;font-size:26px;animation:tgscr 1.4s linear infinite;transform-origin:left bottom}
+@keyframes tgscr{0%{transform:translateX(-120px) rotate(-10deg)}35%{transform:translateX(-80px) rotate(8deg)}70%{transform:translateX(-10px) rotate(-6deg)}100%{transform:translateX(-10px) rotate(0)}}
+.tg .glow{animation:tggl 1s ease 3}
+@keyframes tggl{50%{box-shadow:0 0 0 6px rgba(247,200,68,.7)}}
+
+/* 쓰기 칸 */
+.tg .write{flex:none;background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+.tg .write.mine{border-color:var(--mustard)}
+.tg textarea{width:100%;min-height:84px;border:2px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:17px;background:#fff;color:var(--ink);resize:vertical;margin-top:6px}
+.tg .send{background:var(--tomato);color:#fff;border:0;border-radius:10px;padding:10px 22px;min-height:48px;box-shadow:0 4px 0 #B63F2C}
+.tg .send:disabled{background:#B9B09A;box-shadow:0 4px 0 #9a917c}
+.tg .timer{flex:1;min-width:160px}
+.tg .bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden}
+.tg .bar b{display:block;height:100%;background:var(--grass);width:100%;transition:width .5s linear}
+.tg .bar b.low{background:var(--tomato)}
+.tg .notice{background:#FFE9E2;border:2px solid var(--tomato);border-radius:10px;padding:8px 12px;margin:8px 0;font-size:15px}
+
+/* 전체 이야기 칸 */
+.tg .fbtn{font-family:'Gowun Dodum',sans-serif;font-size:14px;border:2px solid var(--wood);background:var(--paper);border-radius:8px;padding:2px 10px;min-height:36px}
+.tg .full{display:none;flex-direction:column;min-height:0;background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:12px 14px}
+.tg .fh{display:flex;gap:8px;align-items:center}
+.tg .fh span{color:var(--mute);font-size:14px}
+.tg .fclose{margin-left:auto;border:0;background:#F3E6CC;border-radius:8px;padding:2px 10px;min-height:36px;display:none}
+.tg .fb{flex:1;min-height:0;overflow-y:auto;font-size:15px;line-height:1.7}
+.tg .fview{display:flex;gap:6px;margin:6px 0 8px}
+.tg .fview button{flex:1;border:2px solid var(--line);background:#fff;border-radius:8px;padding:4px 6px;font-size:14px;color:var(--mute);min-height:40px}
+.tg .fview button.on{border-color:var(--wood);background:#F3E6CC;color:var(--ink);font-weight:700}
+.tg .fr{display:flex;gap:9px;padding:9px 6px;border-bottom:1px dashed var(--line);border-radius:8px}
+.tg .fr:last-child{border-bottom:0}
+.tg .fr.mine{background:#FFF1BF;border-bottom-color:transparent}
+.tg .fr i{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:17px;position:relative}
+.tg .fr i b{position:absolute;right:-5px;bottom:-5px;font-size:10px;background:var(--ink);color:#fff;border-radius:8px;padding:0 5px;line-height:15px}
+.tg .fr .who{font-size:13px;color:var(--mute);font-weight:700}
+.tg .fr.mine .who{color:#8A5A00}
+.tg .fr p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
+.tg .ff{padding:6px 4px;font-size:16.5px;line-height:1.95;word-break:keep-all;overflow-wrap:anywhere}
+.tg .ff .s{display:block;padding:3px 4px 3px 10px;margin:0 0 14px;border-left:4px solid var(--c);border-radius:2px}
+.tg .ff .s.mine{background:#FFE9A0}
+.tg .ff sup{font-size:10px;color:var(--mute);margin-right:2px;font-weight:700}
+.tg .empty{color:var(--mute);text-align:center;padding:24px 0}
+
+@media(min-width:900px){.tg .cols{grid-template-columns:1fr 340px}.tg .full{display:flex}.tg .fbtn{display:none}}
+@media(max-width:899px){.tg .full.open{display:flex;position:fixed;left:0;right:0;bottom:0;height:72vh;z-index:60;border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(74,50,40,.35)}.tg .full.open .fclose{display:block}}
+@media(max-width:560px){
+  .tg{--nav-h:64px}
+  .tg .room{padding:6px 10px 0}
+  .tg .room h2{font-size:20px;gap:6px;margin:2px 0}
+  .tg .mode{font-size:12px}
+  .tg .sub.hide-m{display:none}
+  .tg .members{flex-wrap:nowrap;overflow-x:auto;margin:4px 0 6px}
+  .tg .mem{flex:none}
+  .tg .chk{gap:10px;margin:6px 0}
+  .tg .cbtn{min-width:0;padding:10px 14px;font-size:16px}
+  .tg .cmsg{min-width:120px;font-size:14px}
+  .tg textarea{min-height:60px}
+  .tg .bub{max-width:84%}
+  .tg .codein{font-size:26px}
+}
+
+/* 선생님 보기 */
+.tg table{width:100%;border-collapse:collapse;background:var(--paper);border:2px solid var(--line)}
+.tg th,.tg td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:15px}
+.tg th{background:#F3E6CC;font-weight:400;color:var(--mute)}
+.tg tr.rm{cursor:pointer}.tg tr.rm:hover{background:#FFF4CC}
+.tg .st{font-size:13px;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.tg .st.ok{background:#DFF0D2}.tg .st.wait{background:#FFF0B8}.tg .st.stuck{background:#FFD9D0}.tg .st.done{background:#DCEBF5}
+.tg .det td{background:#FFFBEA}
+.tg .det .ln{display:flex;gap:8px;align-items:center;margin:4px 0}
+.tg .det .ln span{flex:1;word-break:keep-all;overflow-wrap:anywhere}
+.tg .det .ln.hid span{text-decoration:line-through;color:var(--mute)}
+.tg .det .ln button{border:1px solid var(--line);background:#fff;border-radius:6px;font-size:13px;padding:0 8px;min-height:32px;flex:none}
+.tg .codechip{font-family:'Black Han Sans',sans-serif;letter-spacing:.15em;font-size:20px}
+@media(max-width:560px){.tg th:nth-child(5),.tg td:nth-child(5){display:none}}
+
+/* AKLABS 공통 푸터 (aklabs-footer 스킬, 읽기·문서형: 본문 끝 + 위 간격) */
+.tg .aklabs-foot{--f-bg:transparent;--f-ink:var(--ink);--f-sub:var(--mute);--f-line:var(--line);--f-accent:var(--tomato);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px 24px;min-height:56px;margin-top:24px;padding:16px 24px;border-top:1px solid var(--f-line);font-size:14px;line-height:1.5;color:var(--f-sub)}
+.tg .aklabs-foot b{color:var(--f-ink);font-weight:700;letter-spacing:.04em}
+.tg .aklabs-foot nav{display:flex;gap:4px 24px;flex-wrap:wrap}
+.tg .aklabs-foot a{display:inline-flex;align-items:center;min-height:40px;color:var(--f-sub);text-decoration:none;border-bottom:1px solid transparent}
+.tg .aklabs-foot a:hover,.tg .aklabs-foot a:focus-visible{color:var(--f-accent);border-bottom-color:var(--f-accent)}
+@media(max-width:820px){.tg .aklabs-foot{padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));flex-direction:column;align-items:center;text-align:center;gap:2px}.tg .aklabs-foot nav{justify-content:center}}
+
+/* 내 쪽 꾸미기 (시안 A 한 쪽 집중) */
+.tg .pd{max-width:1000px;margin:0 auto;padding:10px 16px 48px}
+.tg .pd h2{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.tg .pd-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:3px solid var(--line);margin:10px 0 14px}
+.tg .pd-tabs button{background:none;border:0;border-bottom:5px solid transparent;margin-bottom:-3px;min-height:48px;padding:6px 14px;font-size:17px;color:var(--mute);transition:border-color .15s}
+.tg .pd-tabs button:hover{border-bottom-color:var(--line)}
+.tg .pd-tabs button.mine{color:var(--ink)}
+.tg .pd-tabs button.on{border-bottom-color:var(--tomato);font-weight:700;color:var(--ink)}
+.tg .pd-page{display:flex;aspect-ratio:16/10;background:#fff;border:2px solid var(--line);box-shadow:0 6px 0 var(--line);border-radius:6px;overflow:hidden}
+.tg .pd-page .art{flex:1;min-width:0;background:#F4EEDF;display:flex;align-items:center;justify-content:center;border-right:2px solid var(--line)}
+.tg .pd-page .art img{width:100%;height:100%;object-fit:contain}
+.tg .pd-page .none{text-align:center;color:var(--mute);font-size:15px;padding:10px}
+.tg .pd-page .tx{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:5%;font-family:Pretendard,'Gowun Dodum',sans-serif;font-weight:500;line-height:1.7;overflow:auto;word-break:keep-all}
+.tg .pd-who{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mute);margin:12px 0 0}
+.tg .pd-who i{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-style:normal}
+.tg .pd-tools{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;align-items:center}
+.tg .pd-tools .save{margin-left:auto}
+.tg .pd-step{display:inline-flex;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.tg .pd-step button{background:none;border:0;min-width:56px;min-height:48px;font-size:20px;font-weight:700}
+.tg .pd-step button:hover{background:#FFF3C4}
+.tg .pd-step span{align-self:center;padding:0 10px;font-size:15px;color:var(--mute)}
+.tg .pd-note{background:#FFF3C4;border:2px solid var(--mustard);border-radius:10px;padding:8px 12px;font-size:15px}
+.tg .pd-draw{position:fixed;inset:0;background:rgba(74,50,40,.55);z-index:80;display:flex;align-items:center;justify-content:center;padding:12px}
+.tg .pd-draw .box{background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:12px;width:min(680px,100%);max-height:100%;overflow:auto}
+.tg .pd-draw canvas{width:100%;aspect-ratio:16/10;background:#fff;border:2px solid var(--line);border-radius:6px;touch-action:none;display:block}
+.tg .pd-colors{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.tg .pd-colors button{width:44px;height:44px;border-radius:50%;border:3px solid var(--line)}
+.tg .pd-colors button.on{border-color:var(--ink);transform:scale(1.1)}
+.tg .pd-colors button.er{width:auto;border-radius:10px;padding:0 12px;background:#fff;font-size:15px}
+.tg .pd-colors label{display:flex;align-items:center;gap:6px;font-size:15px}
+@media(max-width:700px){
+  .tg .pd{padding:6px 12px 40px}
+  .tg .pd-page .tx{font-size:15px!important;padding:3%}
+  .tg .pd-tools .btn{flex:1 1 100%}
+  .tg .pd-tools .save{margin-left:0;flex:1 1 100%}
+}

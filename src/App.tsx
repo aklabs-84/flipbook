@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard'
 import Editor from './pages/Editor'
 import Viewer from './pages/Viewer'
 import Gallery from './pages/Gallery'
+import Writer from './pages/Writer'
+import Together from './pages/Together'
 import Navbar from './components/Navbar'
 
 // Layout component to conditionally show Navbar
@@ -50,6 +52,8 @@ function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/gallery" element={<Gallery />} />
+                    <Route path="/writer" element={<Writer />} />
+                    <Route path="/together" element={<Together />} />
                     <Route path="/edit/:bookId" element={<Editor />} />
                     <Route path="/view/:bookId" element={<Viewer />} />
                 </Routes>
