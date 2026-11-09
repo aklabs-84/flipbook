@@ -1,9 +1,9 @@
 import { Fragment, useState } from 'react'
 import {
-  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetBook,
+  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetBook, teacherSetSent, teacherGetSent,
   type TeacherMember, TeacherRoomSummary, type TeacherLine, type RelayMode,
 } from '../../lib/relay'
-import { sendRoomToBook } from '../../lib/roomToBook'
+import { sendRoomToBook, type SendResult } from '../../lib/roomToBook'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { useAsk } from './useAsk'
@@ -23,7 +23,7 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
   const [max, setMax] = useState(5)
 
   const { user } = useAuthStore()
-  const { ask, box } = useAsk()
+  const { ask, choose, box } = useAsk()
   const [bookId, setBookId] = useState('')
   const [sentCode, setSentCode] = useState('')
   const [openCode, setOpenCode] = useState('')
@@ -69,16 +69,40 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
     })
   }
 
+  async function doSend(r: TeacherRoomSummary, append?: { bookId: string; afterLine: number }) {
+    if (!user) return
+    const res = await run(async () => {
+      const ls = await teacherRoom(tc, r.code)
+      const ps = await teacherPages(tc, r.code)
+      const out: SendResult = await sendRoomToBook(user.id, r.name, ls, ps, append)
+      await teacherSetSent(tc, r.code, out.bookId, out.lastLine)
+      return out
+    })
+    if (res) {
+      setBookId(res.bookId); setSentCode(r.code)
+      setInfo(append ? `기존 책 뒤에 ${res.added}쪽을 이어 붙였어요! [만든 책 열기]로 확인해 보세요.` : '플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.')
+    }
+  }
+
   async function sendBook(r: TeacherRoomSummary) {
     if (!user) { setErr('플립북으로 보내려면 먼저 위쪽 [로그인]으로 선생님 계정에 로그인해 주세요.'); return }
-    ask(`"${r.name}" 이야기를 새 플립북으로 만들까요?\n(숨긴 글은 빠져요. 글 순서대로 쪽이 만들어져요.)`, async () => {
-      const res = await run(async () => {
-        const ls = await teacherRoom(tc, r.code)
-        const ps = await teacherPages(tc, r.code)
-        return sendRoomToBook(user.id, r.name, ls, ps)
-      })
-      if (res) { setBookId(res); setSentCode(r.code); setInfo('플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.') }
+    // 이 방으로 만든 책이 이미 있는지 확인
+    const sent = await run(async () => {
+      const s = await teacherGetSent(tc, r.code)
+      if (!s.book) return null
+      const { data } = await supabase.from('books').select('id,title').eq('id', s.book).maybeSingle()
+      if (!data) return null
+      const { count } = await supabase.from('pages').select('id', { count: 'exact', head: true }).eq('book_id', s.book)
+      return { id: s.book, title: (data.title as string) || '제목 없음', pages: count ?? 0, line: s.line ?? 0 }
     })
+    if (sent) {
+      choose(`이 방으로 만든 책이 이미 있어요: "${sent.title}" (${sent.pages}쪽)\n어떻게 할까요?\n(숨긴 글은 빠져요.)`, [
+        { label: '그 책에 이어 붙이기', fn: () => doSend(r, { bookId: sent.id, afterLine: sent.line }) },
+        { label: '새 책으로 만들기', fn: () => doSend(r), ghost: true },
+      ])
+      return
+    }
+    ask(`"${r.name}" 이야기를 새 플립북으로 만들까요?\n(숨긴 글은 빠져요. 글 순서대로 쪽이 만들어져요.)`, () => doSend(r))
   }
 
   async function showToStudents(r: TeacherRoomSummary) {

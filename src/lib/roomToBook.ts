@@ -10,18 +10,34 @@ async function uploadDataUrl(dataUrl: string, folder: string): Promise<string> {
 }
 
 // 함께 쓰는 방 한 개를 플립북(storybook) 한 권으로 만든다. 숨긴 글·알림 글은 빼고 쓴 순서대로 쪽을 만든다
+export interface SendResult { bookId: string; lastLine: number; added: number }
+
 export async function sendRoomToBook(
   userId: string, title: string, lines: TeacherLine[], pages: PageData[],
-): Promise<string> {
-  const story = lines.filter(l => !l.sys && !l.hidden)
-  if (story.length === 0) throw new Error('보낼 이야기가 아직 없어요')
+  append?: { bookId: string; afterLine: number },
+): Promise<SendResult> {
+  const all = lines.filter(l => !l.sys && !l.hidden)
+  const story = append ? all.filter(l => l.id > append.afterLine) : all
+  if (story.length === 0) throw new Error(append ? '새로 붙일 이야기가 아직 없어요' : '보낼 이야기가 아직 없어요')
 
-  const { data: book, error } = await supabase
-    .from('books')
-    .insert({ user_id: userId, title, is_rtl: false, book_type: 'storybook' })
-    .select()
-    .single()
-  if (error || !book) throw new Error('책을 만들지 못했어요')
+  let bookId: string
+  let start = 0
+  if (append) {
+    const { data: last, error: e } = await supabase
+      .from('pages').select('page_number').eq('book_id', append.bookId)
+      .order('page_number', { ascending: false }).limit(1)
+    if (e) throw new Error('기존 책을 찾지 못했어요')
+    bookId = append.bookId
+    start = (last?.[0]?.page_number as number | undefined) ?? 0
+  } else {
+    const { data: book, error } = await supabase
+      .from('books')
+      .insert({ user_id: userId, title, is_rtl: false, book_type: 'storybook' })
+      .select()
+      .single()
+    if (error || !book) throw new Error('책을 만들지 못했어요')
+    bookId = book.id as string
+  }
 
   const byseq = new Map(pages.map(p => [p.seq, p]))
   const rows = []
@@ -33,8 +49,8 @@ export async function sendRoomToBook(
       try { mediaUrl = await uploadDataUrl(p.img, userId) } catch { mediaUrl = null }
     }
     rows.push({
-      book_id: book.id,
-      page_number: i + 1,
+      book_id: bookId,
+      page_number: start + i + 1,
       text_layers: { content: l.t, imageFit: 'contain', fontSize: p?.font ?? 22 },
       layout_preset: 'full',
       media_url: mediaUrl,
@@ -43,5 +59,5 @@ export async function sendRoomToBook(
   }
   const { error: pageError } = await supabase.from('pages').insert(rows)
   if (pageError) throw new Error('쪽을 저장하지 못했어요')
-  return book.id as string
+  return { bookId, lastLine: Math.max(...story.map(l => l.id)), added: story.length }
 }
