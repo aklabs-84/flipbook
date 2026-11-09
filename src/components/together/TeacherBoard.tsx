@@ -1,9 +1,10 @@
 import { Fragment, useState } from 'react'
 import {
-  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease,
+  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetBook,
   type TeacherMember, TeacherRoomSummary, type TeacherLine, type RelayMode,
 } from '../../lib/relay'
 import { sendRoomToBook } from '../../lib/roomToBook'
+import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { useAsk } from './useAsk'
 
@@ -77,6 +78,18 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
         return sendRoomToBook(user.id, r.name, ls, ps)
       })
       if (res) { setBookId(res); setSentCode(r.code); setInfo('플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.') }
+    })
+  }
+
+  async function showToStudents(r: TeacherRoomSummary) {
+    ask(`학생들에게 "${r.name}" 책을 보여 줄까요?\n학생 화면에 [완성된 책 보기] 버튼이 생겨요.\n⚠️ 책이 '공개'로 바뀌어 갤러리에서도 누구나 볼 수 있어요. 사진에 얼굴·이름이 없는지 먼저 확인해 주세요.`, async () => {
+      const ok = await run(async () => {
+        const { error } = await supabase.from('books').update({ is_public: true }).eq('id', bookId)
+        if (error) throw new Error('책을 공개로 바꾸지 못했어요')
+        await teacherSetBook(tc, r.code, bookId)
+        return true
+      })
+      if (ok) setInfo('학생 화면에 [완성된 책 보기] 버튼이 생겼어요. 학생이 [새 글 확인]을 누르면 보여요.')
     })
   }
 
@@ -195,6 +208,9 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
                         <button className="btn sm" type="button" disabled={busy} onClick={() => void sendBook(r)}>📖 플립북으로 보내기</button>
                         {bookId && sentCode === r.code && (
                           <a className="btn ghost sm" style={{ marginLeft: 8 }} href={`/edit/${bookId}`} target="_blank" rel="noopener">만든 책 열기</a>
+                        )}
+                        {bookId && sentCode === r.code && (
+                          <button className="btn ghost sm" style={{ marginLeft: 8 }} type="button" disabled={busy} onClick={() => void showToStudents(r)}>👦 학생들에게 책 보여 주기</button>
                         )}
                       </div>
                       {r.status !== 'done' && (

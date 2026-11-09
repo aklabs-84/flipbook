@@ -20,6 +20,7 @@ export default function ChatRoom({ session, onLeave }: Props) {
   const [mode, setMode] = useState<RelayMode>('free')
   const [limit, setLimit] = useState(30)
   const [done, setDone] = useState(false)
+  const [bookId, setBookId] = useState<string | null>(null)
   const [members, setMembers] = useState<RelayMember[]>([])
   const [lines, setLines] = useState<RelayLine[]>([])
   const [turn, setTurn] = useState(0)
@@ -96,6 +97,7 @@ export default function ChatRoom({ session, onLeave }: Props) {
       } else {
         verRef.current = r.ver
         if (r.name) setName(r.name)
+        setBookId(r.book ?? null)
         if (r.mode) setMode(r.mode)
         if (r.time_limit) setLimit(r.time_limit)
         setDone(r.status === 'done')
@@ -211,6 +213,7 @@ export default function ChatRoom({ session, onLeave }: Props) {
         <span className="mode">{mode === 'challenge' ? `도전 모드 · 한 차례 ${limit}초` : '여유 모드 · 시간 제한 없음'}</span>
         <button className="fbtn" type="button" onClick={() => setStoryOpen(true)}>📖 전체 이야기</button>
         <button className="fbtn" style={{ display: 'inline-block' }} type="button" onClick={() => setView('pages')}>🎨 내 쪽 꾸미기</button>
+        {bookId && <a className="fbtn" style={{ display: 'inline-block' }} href={`/view/${bookId}`} target="_blank" rel="noopener">📚 완성된 책 보기</a>}
         <button className="link" type="button" onClick={() => ask('이 방에서 나갈까요? (같은 별명으로 다시 들어오려면 선생님께 말해야 해요)', onLeave)}>나가기</button>
       </h2>
       {leaveBox}

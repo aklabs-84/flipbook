@@ -13,6 +13,7 @@ export interface RelayState {
   turn_started_at: string
   // changed === true 일 때만 아래가 옴
   name?: string
+  book?: string | null
   mode?: RelayMode
   time_limit?: number
   status?: 'open' | 'done'
@@ -68,6 +69,9 @@ export const teacherHide = (tc: string, lineId: number, hidden: boolean) =>
 
 export const teacherClose = (tc: string, code: string) =>
   call<void>('wr_close_room', { p_teacher_code: tc, p_code: code })
+
+export const teacherSetBook = (tc: string, code: string, book: string | null) =>
+  call<{ ok: boolean }>('wr_set_book', { p_teacher_code: tc, p_code: code, p_book: book })
 
 export interface TeacherMember { seq: number; nickname: string; released: boolean }
 export const teacherMembers = (tc: string, code: string) =>
