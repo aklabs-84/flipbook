@@ -3,11 +3,12 @@
   --wall:#FBF1DC; --wood:#C98F5A; --ink:#4A3228; --mustard:#F7C844; --grass:#66A844; --tomato:#E8553E;
   --sky:#BFE0F2; --paper:#FFFDF6; --line:#E7D5B3; --mute:#7C6657; --sub:#7C6657; --accent:#E8553E;
   --nav-h:64px;
-  min-height:100vh; padding-top:var(--nav-h); background:var(--wall); color:var(--ink);
+  box-sizing:border-box; display:flex; flex-direction:column; min-height:100vh; padding-top:var(--nav-h); background:var(--wall); color:var(--ink);
   font-family:'Gowun Dodum','Noto Sans KR',system-ui,sans-serif; font-size:17px; line-height:1.6;
   -webkit-text-size-adjust:100%;
 }
 .tg *{box-sizing:border-box}
+.tg>*:not(.aklabs-foot){width:100%}
 .tg button{font:inherit;color:inherit;cursor:pointer}
 .tg h1,.tg h2{font-family:'Black Han Sans','Gowun Dodum',sans-serif;font-weight:400;margin:6px 0}
 .tg h1{font-size:30px}.tg h2{font-size:26px}
@@ -144,7 +145,7 @@
 
 /* AKLABS 공통 푸터 (aklabs-footer 스킬, 읽기·문서형: 본문 끝 + 위 간격) */
 .tg .aklabs-foot{--f-bg:transparent;--f-ink:var(--ink);--f-sub:var(--mute);--f-line:var(--line);--f-accent:var(--tomato);
-  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px 24px;min-height:56px;margin-top:24px;padding:16px 24px;border-top:1px solid var(--f-line);font-size:14px;line-height:1.5;color:var(--f-sub)}
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px 24px;min-height:56px;margin-top:auto;padding:16px 24px;border-top:1px solid var(--f-line);font-size:14px;line-height:1.5;color:var(--f-sub)}
 .tg .aklabs-foot b{color:var(--f-ink);font-weight:700;letter-spacing:.04em}
 .tg .aklabs-foot nav{display:flex;gap:4px 24px;flex-wrap:wrap}
 .tg .aklabs-foot a{display:inline-flex;align-items:center;min-height:40px;color:var(--f-sub);text-decoration:none;border-bottom:1px solid transparent}
