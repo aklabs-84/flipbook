@@ -21,6 +21,7 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
   const [mode, setMode] = useState<RelayMode>('free')
   const [limit, setLimit] = useState(30)
   const [max, setMax] = useState(5)
+  const [free, setFree] = useState(true)
 
   const { user } = useAuthStore()
   const { ask, choose, box } = useAsk()
@@ -58,7 +59,7 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
 
   async function create() {
     if (!name.trim()) { setErr('방 이름을 써 주세요.'); return }
-    const c = await run(() => teacherCreateRoom(tc, name.trim(), mode, limit, max))
+    const c = await run(() => teacherCreateRoom(tc, name.trim(), mode, limit, max, free))
     if (c) { setInfo(`방을 만들었어요! 방 번호는 ${c} 예요. 학생들에게 알려 주세요.`); setName(''); await refresh() }
   }
 
@@ -190,6 +191,10 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
               {[4, 5, 6].map(n => <option key={n} value={n}>{n}명</option>)}
             </select>
           </div>
+          <label style={{ flex: '1 1 100%', display: 'flex', gap: 8, alignItems: 'center', fontSize: 15 }}>
+            <input type="checkbox" checked={free} onChange={e => setFree(e.target.checked)} style={{ width: 22, height: 22 }} />
+            같은 별명이면 바로 다시 들어오기 <span style={{ color: 'var(--mute)' }}>(끄면 선생님이 [자리 비워 주기]를 눌러야 해요)</span>
+          </label>
           <button className="btn" type="button" onClick={() => void create()} disabled={busy}>방 만들기</button>
         </div>
       </div>

@@ -55,8 +55,8 @@ export const relayCheck = (code: string, token: string, ver: number, since: numb
 export const relaySubmit = (code: string, token: string, text: string) =>
   call<{ ok: boolean }>('wr_submit', { p_code: code, p_token: token, p_text: text })
 
-export const teacherCreateRoom = (tc: string, name: string, mode: RelayMode, limit: number, max: number) =>
-  call<string>('wr_create_room', { p_teacher_code: tc, p_name: name, p_mode: mode, p_limit: limit, p_max: max })
+export const teacherCreateRoom = (tc: string, name: string, mode: RelayMode, limit: number, max: number, free = true) =>
+  call<string>('wr_create_room', { p_teacher_code: tc, p_name: name, p_mode: mode, p_limit: limit, p_max: max, p_free: free })
 
 export const teacherOverview = (tc: string) =>
   call<TeacherRoomSummary[]>('wr_teacher_overview', { p_teacher_code: tc })
