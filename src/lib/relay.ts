@@ -34,6 +34,7 @@ export interface TeacherRoomSummary {
   members: number
   lines: number
   turn: string | null
+  free_rejoin?: boolean
 }
 
 export interface TeacherLine { id: number; seq: number; who: string | null; t: string; hidden: boolean; sys: boolean }

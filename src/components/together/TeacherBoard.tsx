@@ -274,11 +274,13 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
                               <div style={{ marginTop: 6 }}>
                                 {mems.map(m => (
                                   <div key={m.seq} className="mem">
-                                    <span>{m.leader ? '👑 ' : ''}{m.nickname}</span>
-                                    <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void setLeader(r.code, m)}>{m.leader ? '대표 해제' : '대표로 정하기'}</button>
-                                    {m.released
-                                      ? <em style={{ fontSize: 14 }}>(다시 들어오기 기다림)</em>
-                                      : <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void release(r.code, m)}>자리 비워 주기</button>}
+                                    <span className="nm">{m.leader ? '👑 ' : ''}{m.nickname}</span>
+                                    <div className="act">
+                                      <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void setLeader(r.code, m)}>{m.leader ? '대표 해제' : '대표로 정하기'}</button>
+                                      {m.released
+                                        ? <em style={{ fontSize: 14 }}>(다시 들어오기 기다림)</em>
+                                        : !r.free_rejoin && <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void release(r.code, m)}>자리 비워 주기</button>}
+                                    </div>
                                   </div>
                                 ))}
                               </div>
