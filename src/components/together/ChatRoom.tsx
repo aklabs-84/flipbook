@@ -209,7 +209,7 @@ export default function ChatRoom({ session, onLeave }: Props) {
   return (
     <div className="room" ref={rootRef}>
       <h2>
-        {name || '함께 쓰는 방'}
+        {name || '이야기 교실'}
         <span className="mode">{mode === 'challenge' ? `도전 모드 · 한 차례 ${limit}초` : '여유 모드 · 시간 제한 없음'}</span>
         <button className="fbtn" type="button" onClick={() => setStoryOpen(true)}>📖 전체 이야기</button>
         <button className="fbtn" style={{ display: 'inline-block' }} type="button" onClick={() => setView('pages')}>🎨 내 쪽 꾸미기</button>

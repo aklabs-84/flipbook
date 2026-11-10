@@ -50,7 +50,7 @@ export default function Navbar() {
                                 : 'text-gray-500 hover:text-brand-purple'
                             }`}
                     >
-                        함께 쓰는 방
+                        이야기 교실
                     </Link>
                     {user && (
                         <Link
@@ -149,7 +149,7 @@ export default function Navbar() {
                         className={`block px-4 py-3 rounded-xl text-base font-semibold transition ${isActive('/together') ? 'bg-gray-100 text-brand-purple' : 'text-gray-600 hover:bg-gray-50'
                             }`}
                     >
-                        함께 쓰는 방
+                        이야기 교실
                     </Link>
                     {user && (
                         <Link

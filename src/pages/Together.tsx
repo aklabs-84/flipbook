@@ -62,7 +62,7 @@ export default function Together() {
   return (
     <div className="tg">
       <div className="wrap">
-        <h1>✏️ 함께 쓰는 방</h1>
+        <h1>✏️ 이야기 교실</h1>
         <p className="sub">친구들과 한 줄씩 번갈아 이야기를 이어 써요.</p>
         {hist.length > 0 && (
           <div className="card" style={{ marginBottom: 14 }}>

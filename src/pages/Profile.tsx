@@ -52,7 +52,7 @@ export default function Profile() {
             <div className="card" style={{ marginBottom: 14 }}>
               <b>선생님 등록</b>
               {teacher ? (
-                <p style={{ margin: '8px 0 0' }}>✅ 선생님으로 등록됨. <Link to="/together">함께 쓰는 방</Link>의 선생님 화면이 코드 없이 열려요.</p>
+                <p style={{ margin: '8px 0 0' }}>✅ 선생님으로 등록됨. <Link to="/together">이야기 교실</Link>의 선생님 화면이 코드 없이 열려요.</p>
               ) : (
                 <form onSubmit={e => { e.preventDefault(); void register() }}>
                   <p className="sub" style={{ margin: '4px 0 0' }}>선생님 코드를 한 번만 넣으면, 이 계정은 다음부터 코드 없이 선생님 화면에 들어가요.</p>
