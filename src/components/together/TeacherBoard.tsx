@@ -89,15 +89,13 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
     const res = await run(async () => {
       const ls = await teacherRoom(tc, r.code)
       const ps = await teacherPages(tc, r.code)
-      if (append && !ls.some(l => !l.sys && !l.hidden && l.id > append.afterLine)) return null
       const out: SendResult = await sendRoomToBook(user.id, r.name, ls, ps, append)
       await teacherSetSent(tc, r.code, out.bookId, out.lastLine)
       return out
     })
-    if (res === null) { setInfo('새로 붙일 이야기가 없어요. 이미 만든 책을 열거나 학생들에게 보여 줄 수 있어요 👉 오른쪽 [방 관리]'); return }
     if (res) {
       setBookId(res.bookId); setSentCode(r.code)
-      setInfo(append ? `기존 책 뒤에 ${res.added}쪽을 이어 붙였어요! [만든 책 열기]로 확인해 보세요.` : '플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.')
+      setInfo(append ? `기존 책에 새 쪽 ${res.added}개를 붙이고, 그림 ${res.filled}장을 채웠어요! [만든 책 열기]로 확인해 보세요.` : '플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.')
     }
   }
 
