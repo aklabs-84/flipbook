@@ -229,3 +229,15 @@
 .dk .spell li s{color:var(--red);text-decoration-style:dotted}
 .dk .spell li small{color:var(--mute);font-size:15px;line-height:1.6}
 @media(max-width:600px){.dk .spell li{grid-template-columns:1fr auto}.dk .spell li small{grid-column:1/-1;order:3}}
+/* 책 펼치기 물음창 */
+.dk .ask{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(20,14,8,.45);padding:16px}
+.dk .ask .box{background:var(--paper);border:1px solid var(--line);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);padding:32px 36px 28px;max-width:420px;width:100%;text-align:center}
+.dk .ask .box p{margin:0 0 24px;font:700 22px/1.6 'Gowun Batang',serif;color:var(--ink)}
+.dk .ask .box div{display:flex;gap:12px;justify-content:center}
+.dk .ask .box .btn{min-height:44px;min-width:110px}
+.dk .ask .box button{font:700 17px/1 inherit;cursor:pointer;padding:0 22px;border:1px solid var(--ink);background:transparent;color:var(--ink)}
+.dk .ask .box button:first-child{background:var(--ink);color:var(--paper)}
+.dk .ask .box button:hover{opacity:.85}
+.dk .ask .box small{display:block;margin:-10px 0 22px;color:var(--mute);font-size:16px;line-height:1.7}
+.dk .ask .box a.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 22px;background:var(--ink);color:var(--paper);font:700 17px/1 inherit;text-decoration:none}
+@media(max-width:480px){.dk .ask .box div{flex-direction:column}.dk .ask .box .btn{width:100%}}

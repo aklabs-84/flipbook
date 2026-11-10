@@ -3,6 +3,7 @@ import '../styles/desk.css'
 import Footer from '../components/together/Footer'
 import DeskShelf from './DeskShelf'
 import { findSpellHints } from '../lib/spell'
+import '../lib/classlog'
 import {
   deskCreateAuthor, deskLogin, deskSave, deskGet,loadDeskSession, saveDeskSession, clearDeskSession,
   loadDeskDraft, saveDeskDraft, DESK_COLORS, DESK_GENRES,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { deskList, deskGet, deskDelete, type DeskPieceItem, type DeskPiece, type DeskSession } from '../lib/desk'
+import { getClassLogCtx, viaClassLog, submitToClass, CLASSLOG_URL } from '../lib/classlog'
 
 // ---- 글을 책 쪽으로 나누기 ----
 interface Line { t: string; dq: boolean }
@@ -54,6 +55,10 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
   const [sel, setSel] = useState<string | null>(null)
   const [reading, setReading] = useState<DeskPiece | null>(null)
   const [busy, setBusy] = useState(false)
+  const [ask, setAsk] = useState(false)
+  const [cl, setCl] = useState(false) // 클래스로그AI 안내 창
+  const [sent, setSent] = useState('')
+  const [sending, setSending] = useState(false)
 
   const load = useCallback(async () => {
     try { setItems(await deskList(session.key)); setErr('') }
@@ -62,10 +67,13 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
   useEffect(() => { void load() }, [load])
 
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !reading) setSel(null) }
+    const k = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || reading) return
+      if (ask) setAsk(false); else setSel(null)
+    }
     document.addEventListener('keydown', k)
     return () => document.removeEventListener('keydown', k)
-  }, [reading])
+  }, [reading, ask])
 
   if (err) return <div className="shelf view shelf on"><h2>내 서재</h2><p className="err" role="alert" style={{ color: 'var(--red)' }}>{err}</p></div>
   if (!items) return <div className="shelf view shelf on"><h2>내 서재</h2><p style={{ color: 'var(--mute)' }}>서재를 여는 중…</p></div>
@@ -74,8 +82,24 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
   const drafts = items.filter(i => i.status === 'draft')
   const cur = items.find(i => i.id === sel) ?? null
 
+  const pick = (id: string) => {
+    if (sel === id) { setSel(null); setAsk(false) } else { setSel(id); setAsk(true) }
+  }
+  const submit = async () => {
+    if (!cur) return
+    const ctx = getClassLogCtx()
+    if (!viaClassLog(ctx)) { setCl(true); return }
+    if (!window.confirm(`'${cur.title || '(제목 없음)'}' 글을 선생님께 제출할까요?`)) return
+    setSending(true); setSent('')
+    try {
+      await submitToClass(await deskGet(session.key, cur.id), ctx)
+      setSent('✔ 선생님께 제출했어요. 고친 뒤 다시 내도 돼요.')
+    } catch (e) { setSent(e instanceof Error ? e.message : '제출하지 못했어요') }
+    finally { setSending(false) }
+  }
   const open = async () => {
     if (!cur) return
+    setAsk(false)
     setBusy(true)
     try { setReading(await deskGet(session.key, cur.id)) }
     catch (e) { setErr(e instanceof Error ? e.message : '글을 열지 못했어요') }
@@ -103,8 +127,8 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
             <div key={b.id} className={'bk' + (sel === b.id ? ' sel' : '')} role="button" tabIndex={0}
               aria-label={`${b.title} 책`}
               style={{ '--t': `${40 + Math.min(Math.floor(b.len / 12), 40)}px`, '--h': `${185 + ((n * 37) % 50)}px`, '--d': '150px', '--c': b.color } as React.CSSProperties}
-              onClick={e => { e.stopPropagation(); setSel(sel === b.id ? null : b.id) }}
-              onKeyDown={e => { if (e.key === 'Enter') setSel(sel === b.id ? null : b.id) }}>
+              onClick={e => { e.stopPropagation(); pick(b.id) }}
+              onKeyDown={e => { if (e.key === 'Enter') pick(b.id) }}>
               <div className="f sp"><span>{b.title || '(제목 없음)'}</span></div>
               <div className="f cv"><b>{b.title || '(제목 없음)'}</b><small>글 · {session.nickname}</small></div>
               <div className="f bc" /><div className="f pg" /><div className="f tp" />
@@ -121,6 +145,7 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
             <span className="acts">
               <button className="btn sub" type="button" onClick={() => onEdit(cur.id)}>고치기</button>
               <button className="btn sub" type="button" onClick={() => void remove(cur)}>지우기</button>
+              <button className="btn sub" type="button" disabled={sending} onClick={() => void submit()}>{sending ? '내는 중…' : '선생님께 제출'}</button>
               <a role="button" tabIndex={0} onClick={() => void open()} onKeyDown={e => { if (e.key === 'Enter') void open() }}>
                 {busy ? '여는 중…' : '펼쳐서 읽기 →'}
               </a>
@@ -130,6 +155,8 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
           <div><b>책을 눌러 보세요</b><span>마우스를 올리면 살짝 꺼내져요. 누르면 표지가 활짝 보여요. 한 번 더 누르면 제자리로 돌아가요.</span></div>
         )}
       </div>
+
+      {sent && <p role="status" style={{ margin: '0 0 12px', color: sent.startsWith('✔') ? 'var(--pine)' : 'var(--red)' }}>{sent}</p>}
 
       {drafts.length > 0 && (
         <div className="row">
@@ -148,6 +175,31 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
       <div className="row">
         <div><b>글 {done.length}편</b><span>10편이 넘으면 AI 작가를 키우기 좋아요.</span></div>
       </div>
+
+      {ask && cur && !reading && (
+        <div className="ask" onClick={() => setAsk(false)}>
+          <div className="box" role="dialog" aria-modal="true" aria-label="책 펼치기" onClick={e => e.stopPropagation()}>
+            <p>📖 「{cur.title || '(제목 없음)'}」<br />책을 펼쳐서 읽어 볼까요?</p>
+            <div>
+              <button className="btn" type="button" autoFocus onClick={() => void open()}>읽기</button>
+              <button className="btn sub" type="button" onClick={() => setAsk(false)}>아니요</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cl && (
+        <div className="ask" onClick={() => setCl(false)}>
+          <div className="box" role="dialog" aria-modal="true" aria-label="클래스로그AI 안내" onClick={e => e.stopPropagation()}>
+            <p>클래스로그AI로 들어와야<br />글이 제출돼요</p>
+            <small>내 글이 내 이름으로 선생님께 바로 도착해요. 지금 이 화면의 글은 서재에 안전하게 있어요.</small>
+            <div>
+              <a className="btn" href={CLASSLOG_URL} target="_blank" rel="noopener">클래스로그AI로 입장하기</a>
+              <button className="btn sub" type="button" onClick={() => setCl(false)}>닫기</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {reading && <Reader piece={reading} nickname={session.nickname} onClose={() => setReading(null)} />}
     </div>
