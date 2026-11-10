@@ -11,6 +11,7 @@ import Viewer from './pages/Viewer'
 import Gallery from './pages/Gallery'
 import Writer from './pages/Writer'
 import Together from './pages/Together'
+import Profile from './pages/Profile'
 import Navbar from './components/Navbar'
 
 // Layout component to conditionally show Navbar
@@ -54,6 +55,7 @@ function App() {
                     <Route path="/gallery" element={<Gallery />} />
                     <Route path="/writer" element={<Writer />} />
                     <Route path="/together" element={<Together />} />
+                    <Route path="/profile" element={<Profile />} />
                     <Route path="/edit/:bookId" element={<Editor />} />
                     <Route path="/view/:bookId" element={<Viewer />} />
                 </Routes>

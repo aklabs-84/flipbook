@@ -63,6 +63,17 @@ export default function Navbar() {
                             내 프로젝트
                         </Link>
                     )}
+                    {user && (
+                        <Link
+                            to="/profile"
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${isActive('/profile')
+                                    ? 'bg-white text-brand-purple shadow-sm'
+                                    : 'text-gray-500 hover:text-brand-purple'
+                                }`}
+                        >
+                            내 정보
+                        </Link>
+                    )}
                 </div>
 
                 {/* Desktop User Profile */}
@@ -148,6 +159,16 @@ export default function Navbar() {
                                 }`}
                         >
                             내 프로젝트
+                        </Link>
+                    )}
+                    {user && (
+                        <Link
+                            to="/profile"
+                            onClick={closeMenu}
+                            className={`block px-4 py-3 rounded-xl text-base font-semibold transition ${isActive('/profile') ? 'bg-gray-100 text-brand-purple' : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            내 정보
                         </Link>
                     )}
 

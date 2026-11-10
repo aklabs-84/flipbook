@@ -1,6 +1,6 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
-  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetBook, teacherSetSent, teacherGetSent,
+  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetBook, teacherSetSent, teacherGetSent, amTeacher,
   type TeacherMember, TeacherRoomSummary, type TeacherLine, type RelayMode,
 } from '../../lib/relay'
 import { sendRoomToBook, type SendResult } from '../../lib/roomToBook'
@@ -41,6 +41,20 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
     const r = await run(() => teacherOverview(tc))
     if (r) { setRooms(r); setAuthed(true); setInfo(`방 ${r.length}개를 새로 확인했어요.`) }
   }
+
+  // 선생님으로 등록된 계정이면 코드 없이 바로 열기
+  useEffect(() => {
+    if (!user) return
+    let alive = true
+    ;(async () => {
+      try {
+        if (!(await amTeacher())) return
+        const r = await teacherOverview('')
+        if (alive) { setRooms(r); setAuthed(true) }
+      } catch { /* 코드 입력으로 */ }
+    })()
+    return () => { alive = false }
+  }, [user])
 
   async function create() {
     if (!name.trim()) { setErr('방 이름을 써 주세요.'); return }
@@ -132,6 +146,7 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
           <label className="fld" htmlFor="tg-tc">교사 코드</label>
           <input id="tg-tc" type="password" autoComplete="off" value={tc} onChange={e => setTc(e.target.value)} />
           <p className="sub" style={{ marginTop: 6 }}>이 코드는 화면에만 잠깐 두고 저장하지 않아요. 학생에게 알려 주지 마세요.</p>
+          <p className="sub" style={{ marginTop: 4 }}>{user ? <>코드를 매번 넣기 번거로우면 <a href="/profile">내 정보</a>에서 이 계정을 선생님으로 등록해 두세요.</> : '로그인한 뒤 내 정보에서 선생님으로 등록하면 코드 없이 들어와요.'}</p>
           {err && <div className="err" role="alert">{err}</div>}
           <div className="row" style={{ marginTop: 14 }}>
             <button className="btn" type="submit" disabled={busy || !tc}>{busy ? '확인 중…' : '들어가기'}</button>

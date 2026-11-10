@@ -70,6 +70,9 @@ export const teacherHide = (tc: string, lineId: number, hidden: boolean) =>
 export const teacherClose = (tc: string, code: string) =>
   call<void>('wr_close_room', { p_teacher_code: tc, p_code: code })
 
+export const amTeacher = () => call<boolean>('wr_am_teacher', {})
+export const registerTeacher = (code: string) => call<{ ok: boolean }>('wr_register_teacher', { p_code: code })
+
 export const teacherSetSent = (tc: string, code: string, book: string, line: number) =>
   call<{ ok: boolean }>('wr_set_sent', { p_teacher_code: tc, p_code: code, p_book: book, p_line: line })
 
