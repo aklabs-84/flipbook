@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import '../styles/together.css'
 import Footer from '../components/together/Footer'
 import ChatRoom from '../components/together/ChatRoom'
@@ -92,6 +93,11 @@ export default function Together() {
           </div>
           <p className="sub" style={{ marginTop: 14 }}>이름 대신 별명을 써요. 진짜 이름·학교·전화번호는 쓰지 않아요.</p>
         </form>
+        <div className="card" style={{ marginTop: 16 }}>
+          <b>📖 혼자 글을 쓰고 싶나요?</b>
+          <p className="sub" style={{ margin: '4px 0 12px' }}>작가의 책상에서 내 글을 쓰고, 내 서재에 책으로 꽂아 보세요.</p>
+          <Link className="btn ghost" to="/desk">작가의 책상으로 가기 →</Link>
+        </div>
         <div style={{ marginTop: 16 }}>
           <button className="link" type="button" onClick={() => setView('teacher')}>선생님이세요? 선생님 화면 열기</button>
         </div>
