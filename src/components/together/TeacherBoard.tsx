@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useState } from 'react'
 import {
-  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetBook, teacherSetSent, teacherGetSent, amTeacher,
+  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetBook, teacherSetSent, teacherGetSent, amTeacher, teacherSetLeader, teacherBgm, teacherBgmSynced,
   type TeacherMember, TeacherRoomSummary, type TeacherLine, type RelayMode,
 } from '../../lib/relay'
+import { uploadMedia } from '../../services/storageService'
 import { sendRoomToBook, type SendResult } from '../../lib/roomToBook'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
@@ -84,6 +85,31 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
     })
   }
 
+  async function setLeader(code: string, m: TeacherMember) {
+    const nextSeq = m.leader ? null : m.seq
+    const ok = await run(async () => { await teacherSetLeader(tc, code, nextSeq); return true })
+    if (ok) {
+      setMems(old => old.map(x => ({ ...x, leader: nextSeq !== null && x.seq === nextSeq })))
+      setInfo(nextSeq === null ? '방 대표를 없앴어요.' : `"${m.nickname}" 친구를 방 대표로 정했어요. 책 음악을 고를 수 있어요 👑`)
+    }
+  }
+
+  // 방 대표가 고른 음악을 책에 붙인다 (새 책이거나, 음악이 바뀌었을 때만)
+  async function syncBgm(code: string, bId: string, force: boolean) {
+    try {
+      const b = await teacherBgm(tc, code)
+      if (!b.data || (b.synced && !force)) return false
+      const blob = await (await fetch(b.data)).blob()
+      const ext = blob.type.includes('wav') ? 'wav' : blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') || blob.type.includes('m4a') ? 'm4a' : 'mp3'
+      const file = new File([blob], `${(b.name || 'bgm').replace(/[^\w가-힣-]/g, '_')}.${ext}`, { type: blob.type })
+      const url = await uploadMedia(file, 'uploads', `${user!.id}/${bId}/bgm`)
+      const { error } = await supabase.from('books').update({ bgm_url: url }).eq('id', bId)
+      if (error) return false
+      await teacherBgmSynced(tc, code)
+      return true
+    } catch { return false }
+  }
+
   async function doSend(r: TeacherRoomSummary, append?: { bookId: string; afterLine: number }) {
     if (!user) return
     if (append) { setBookId(append.bookId); setSentCode(r.code) }
@@ -92,12 +118,14 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
       const ps = await teacherPages(tc, r.code)
       const out: SendResult = await sendRoomToBook(user.id, r.name, ls, ps, append)
       await teacherSetSent(tc, r.code, out.bookId, out.lastLine)
-      return out
+      const bgmDone = await syncBgm(r.code, out.bookId, !append)
+      return { ...out, bgmDone }
     })
     if (res) {
       setBookId(res.bookId); setSentCode(r.code)
-      if (append && res.added === 0 && res.filled === 0) { setInfo('새로 붙일 이야기도, 바뀐 그림도 없어요. 이미 만든 책을 열거나 학생들에게 보여 줄 수 있어요 👉 오른쪽 [책 만들기]'); return }
-      setInfo(append ? `기존 책에 새 쪽 ${res.added}개를 붙이고, 바뀐 그림 ${res.filled}장을 고쳤어요! [만든 책 열기]로 확인해 보세요.` : '플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.')
+      const bg = res.bgmDone ? ' 🎵 책 음악도 붙였어요.' : ''
+      if (append && res.added === 0 && res.filled === 0 && !res.bgmDone) { setInfo('새로 붙일 이야기도, 바뀐 그림도 없어요. 이미 만든 책을 열거나 학생들에게 보여 줄 수 있어요 👉 오른쪽 [책 만들기]'); return }
+      setInfo((append ? `기존 책에 새 쪽 ${res.added}개를 붙이고, 바뀐 그림 ${res.filled}장을 고쳤어요! [만든 책 열기]로 확인해 보세요.` : '플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.') + bg)
     }
   }
 
@@ -246,7 +274,8 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
                               <div style={{ marginTop: 6 }}>
                                 {mems.map(m => (
                                   <div key={m.seq} className="mem">
-                                    <span>{m.nickname}</span>
+                                    <span>{m.leader ? '👑 ' : ''}{m.nickname}</span>
+                                    <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void setLeader(r.code, m)}>{m.leader ? '대표 해제' : '대표로 정하기'}</button>
                                     {m.released
                                       ? <em style={{ fontSize: 14 }}>(다시 들어오기 기다림)</em>
                                       : <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void release(r.code, m)}>자리 비워 주기</button>}

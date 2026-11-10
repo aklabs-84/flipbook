@@ -22,6 +22,8 @@ export default function ChatRoom({ session, onLeave }: Props) {
   const [done, setDone] = useState(false)
   const [bookId, setBookId] = useState<string | null>(null)
   const [members, setMembers] = useState<RelayMember[]>([])
+  const [leader, setLeader] = useState<number | null>(null)
+  const [bgmName, setBgmName] = useState<string | null>(null)
   const [lines, setLines] = useState<RelayLine[]>([])
   const [turn, setTurn] = useState(0)
   const [turnStart, setTurnStart] = useState<number>(Date.now())
@@ -102,6 +104,8 @@ export default function ChatRoom({ session, onLeave }: Props) {
         if (r.time_limit) setLimit(r.time_limit)
         setDone(r.status === 'done')
         if (r.members) setMembers(r.members)
+        setLeader(r.leader ?? null)
+        setBgmName(r.bgm ?? null)
         const incoming = (r.lines ?? []).filter(l => l.seq > sinceRef.current)
         const prevSince = sinceRef.current
         if (incoming.length) {
@@ -200,7 +204,7 @@ export default function ChatRoom({ session, onLeave }: Props) {
   if (view === 'pages') {
     return (
       <PageDecorator code={code} token={token} me={me}
-        lines={lines} members={members}
+        lines={lines} members={members} leader={leader} bgmName={bgmName}
         onRefreshLines={() => doCheck()}
         onBack={() => setView('chat')} />
     )

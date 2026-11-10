@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAsk } from './useAsk'
 import {
-  pagesGet, pageSave, shrinkImage, bgOf, emojiOf,
+  pagesGet, pageSave, shrinkImage, bgOf, emojiOf, bgmSave, fileToDataUrl,
   type RelayLine, type RelayMember, type PageData,
 } from '../../lib/relay'
 
@@ -11,6 +11,8 @@ interface Props {
   me: number
   lines: RelayLine[]
   members: RelayMember[]
+  leader: number | null
+  bgmName: string | null
   onRefreshLines: () => Promise<void>
   onBack: () => void
 }
@@ -19,7 +21,29 @@ interface Draft { img: string | null; font: number; dirty: boolean }
 
 const COLORS = ['#4A3228', '#E8553E', '#F7C844', '#66A844', '#2E7DBF', '#8A6BBE', '#FFFFFF']
 
-export default function PageDecorator({ code, token, me, lines, members, onRefreshLines, onBack }: Props) {
+export default function PageDecorator({ code, token, me, lines, members, leader, bgmName, onRefreshLines, onBack }: Props) {
+  const bgmRef = useRef<HTMLInputElement>(null)
+  const [bgmBusy, setBgmBusy] = useState(false)
+  const [bgmMsg, setBgmMsg] = useState('')
+  const isLeader = leader !== null && leader === me
+  async function pickBgm(f?: File) {
+    if (!f) return
+    if (!f.type.startsWith('audio/')) { setBgmMsg('음악 파일(mp3 등)을 골라 주세요.'); return }
+    if (f.size > 1.5 * 1024 * 1024) { setBgmMsg('음악이 너무 커요. 1.5MB 이하로 골라 주세요. (짧은 배경음악이 좋아요)'); return }
+    setBgmBusy(true); setBgmMsg('')
+    try {
+      await bgmSave(code, token, f.name.replace(/\.[^.]+$/, ''), await fileToDataUrl(f))
+      await onRefreshLines()
+      setBgmMsg('책 음악을 정했어요! 🎵')
+    } catch (e) { setBgmMsg(e instanceof Error ? e.message : '잠시 후 다시 해 보세요') }
+    finally { setBgmBusy(false); if (bgmRef.current) bgmRef.current.value = '' }
+  }
+  async function clearBgm() {
+    setBgmBusy(true); setBgmMsg('')
+    try { await bgmSave(code, token, null, null); await onRefreshLines(); setBgmMsg('책 음악을 뺐어요.') }
+    catch (e) { setBgmMsg(e instanceof Error ? e.message : '잠시 후 다시 해 보세요') }
+    finally { setBgmBusy(false) }
+  }
   const story = lines.filter(l => !l.sys && l.w !== null)
   const [sel, setSel] = useState(() => Math.max(0, story.findIndex(l => l.w === me)))
   const [drafts, setDrafts] = useState<Record<number, Draft>>({})
@@ -107,6 +131,22 @@ export default function PageDecorator({ code, token, me, lines, members, onRefre
       </h2>
       {box}
       <p className="sub">내가 쓴 문장이 내 쪽이에요. ✏️ 표시가 있는 쪽에 그림을 넣어 봐요.</p>
+
+      <div className="pd-bgm">
+        <b>🎵 책 음악</b>{' '}
+        {bgmName ? <span>지금: {bgmName}</span> : <span>아직 정하지 않았어요</span>}
+        {isLeader ? (
+          <>
+            <button className="btn ghost sm" type="button" disabled={bgmBusy} onClick={() => bgmRef.current?.click()}>{bgmBusy ? '올리는 중…' : '🎵 책 음악 고르기'}</button>
+            {bgmName && <button className="btn ghost sm" type="button" disabled={bgmBusy} onClick={() => void clearBgm()}>음악 빼기</button>}
+            <input ref={bgmRef} type="file" accept="audio/*" hidden onChange={e => void pickBgm(e.target.files?.[0])} />
+            <div className="pd-note">👑 나는 방 대표예요! 우리 책에 깔릴 음악을 골라요. 저작권이 없는 음악만 써요. (1.5MB 이하)</div>
+          </>
+        ) : (
+          <div className="pd-note">음악은 방 대표{leader !== null ? ` (${members.find(m => m.seq === leader)?.nickname ?? ''})` : ''} 친구만 고를 수 있어요.</div>
+        )}
+        {bgmMsg && <div className="pd-note" role="status">{bgmMsg}</div>}
+      </div>
 
       {story.length === 0 ? (
         <div className="empty">아직 쓴 이야기가 없어요. 이야기가 쓰이면 쪽이 생겨요.</div>

@@ -19,6 +19,8 @@ export interface RelayState {
   status?: 'open' | 'done'
   members?: RelayMember[]
   lines?: RelayLine[]
+  leader?: number | null
+  bgm?: string | null
 }
 
 export interface JoinResult { token: string; seq: number; emoji: number }
@@ -77,12 +79,12 @@ export const teacherSetSent = (tc: string, code: string, book: string, line: num
   call<{ ok: boolean }>('wr_set_sent', { p_teacher_code: tc, p_code: code, p_book: book, p_line: line })
 
 export const teacherGetSent = (tc: string, code: string) =>
-  call<{ book: string | null; line: number | null }>('wr_get_sent', { p_teacher_code: tc, p_code: code })
+  call<{ book: string | null; line: number | null; bgm?: string | null; bgm_synced?: boolean }>('wr_get_sent', { p_teacher_code: tc, p_code: code })
 
 export const teacherSetBook = (tc: string, code: string, book: string | null) =>
   call<{ ok: boolean }>('wr_set_book', { p_teacher_code: tc, p_code: code, p_book: book })
 
-export interface TeacherMember { seq: number; nickname: string; released: boolean }
+export interface TeacherMember { seq: number; nickname: string; released: boolean; leader?: boolean }
 export const teacherMembers = (tc: string, code: string) =>
   call<TeacherMember[]>('wr_teacher_members', { p_teacher_code: tc, p_code: code })
 export const teacherRelease = (tc: string, code: string, seq: number) =>
@@ -177,3 +179,25 @@ export const MEMBER_BG = ['#F7C844', '#BFE0F2', '#CDE7B8', '#F5C6C0', '#DCCBF0']
 export const MEMBER_EMOJI = ['🦊', '🐰', '🐻', '🐱', '🐶', '🐼']
 export const bgOf = (emoji: number) => MEMBER_BG[emoji % MEMBER_BG.length]
 export const emojiOf = (emoji: number) => MEMBER_EMOJI[emoji % MEMBER_EMOJI.length]
+
+// ---- 방 대표 · 책 음악 ----
+export const teacherSetLeader = (tc: string, code: string, seq: number | null) =>
+  call<{ ok: boolean }>('wr_set_leader', { p_teacher_code: tc, p_code: code, p_seq: seq })
+
+export const bgmSave = (code: string, token: string, name: string | null, data: string | null) =>
+  call<{ ok: boolean }>('wr_bgm_save', { p_code: code, p_token: token, p_name: name, p_data: data })
+
+export const teacherBgm = (tc: string, code: string) =>
+  call<{ name: string | null; data: string | null; synced: boolean }>('wr_bgm_teacher', { p_teacher_code: tc, p_code: code })
+
+export const teacherBgmSynced = (tc: string, code: string) =>
+  call<{ ok: boolean }>('wr_bgm_synced', { p_teacher_code: tc, p_code: code })
+
+export function fileToDataUrl(f: Blob): Promise<string> {
+  return new Promise((res, rej) => {
+    const r = new FileReader()
+    r.onload = () => res(String(r.result))
+    r.onerror = () => rej(new Error('파일을 읽지 못했어요'))
+    r.readAsDataURL(f)
+  })
+}
