@@ -96,7 +96,8 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
     })
     if (res) {
       setBookId(res.bookId); setSentCode(r.code)
-      setInfo(append ? `기존 책에 새 쪽 ${res.added}개를 붙이고, 그림 ${res.filled}장을 채웠어요! [만든 책 열기]로 확인해 보세요.` : '플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.')
+      if (append && res.added === 0 && res.filled === 0) { setInfo('새로 붙일 이야기도, 바뀐 그림도 없어요. 이미 만든 책을 열거나 학생들에게 보여 줄 수 있어요 👉 오른쪽 [책 만들기]'); return }
+      setInfo(append ? `기존 책에 새 쪽 ${res.added}개를 붙이고, 바뀐 그림 ${res.filled}장을 고쳤어요! [만든 책 열기]로 확인해 보세요.` : '플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.')
     }
   }
 

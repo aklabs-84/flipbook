@@ -10,6 +10,13 @@ async function uploadDataUrl(dataUrl: string, folder: string): Promise<string> {
 }
 
 // 함께 쓰는 방 한 개를 플립북(storybook) 한 권으로 만든다. 숨긴 글·알림 글은 빼고 쓴 순서대로 쪽을 만든다
+// 그림·글자 크기가 바뀌었는지 알아보는 짧은 표시
+function sigOf(img: string | null, font: number): string {
+  let h = 5381
+  for (let i = 0; i < (img?.length ?? 0); i++) h = ((h * 33) ^ img!.charCodeAt(i)) >>> 0
+  return `${h}:${img?.length ?? 0}:${font}`
+}
+
 export interface SendResult { bookId: string; lastLine: number; added: number; filled: number }
 
 export async function sendRoomToBook(
@@ -19,24 +26,30 @@ export async function sendRoomToBook(
   const all = lines.filter(l => !l.sys && !l.hidden)
   const story = append ? all.filter(l => l.id > append.afterLine) : all
   const byseq = new Map(pages.map(p => [p.seq, p]))
-  // 이어 붙이기: 이미 만든 쪽 중 그림이 비어 있는데 그 뒤에 그림이 생긴 쪽을 채워 준다(글 내용으로 짝을 찾음)
+  // 이어 붙이기: 이미 만든 쪽의 그림·글자 크기가 그 뒤에 바뀌었으면 새 것으로 바꿔 준다(글 내용으로 짝을 찾음)
   let filled = 0
   if (append) {
     const { data: old } = await supabase.from('pages').select('id, text_layers, media_url').eq('book_id', append.bookId)
     for (const l of all.filter(x => x.id <= append.afterLine)) {
-      const img = byseq.get(l.seq)?.img
-      if (!img) continue
-      const hit = (old ?? []).find(o => !o.media_url && (o.text_layers as { content?: string } | null)?.content === l.t)
+      const pd = byseq.get(l.seq)
+      const sig = sigOf(pd?.img ?? null, pd?.font ?? 22)
+      const hit = (old ?? []).find(o => (o.text_layers as { content?: string } | null)?.content === l.t)
       if (!hit) continue
+      const tl = (hit.text_layers ?? {}) as Record<string, unknown>
+      if (tl.imgSig === sig) continue
+      if (tl.imgSig === undefined && !hit.media_url && !pd?.img) continue
       try {
-        const url = await uploadDataUrl(img, userId)
-        const { error: ue } = await supabase.from('pages').update({ media_url: url, media_type: 'image' }).eq('id', hit.id)
-        if (!ue) { filled++; hit.media_url = url }
+        const url = pd?.img ? await uploadDataUrl(pd.img, userId) : null
+        const { error: ue } = await supabase.from('pages').update({
+          media_url: url, media_type: url ? 'image' : null,
+          text_layers: { ...tl, fontSize: pd?.font ?? 22, imgSig: sig },
+        }).eq('id', hit.id)
+        if (!ue) { filled++; tl.imgSig = sig }
       } catch { /* 한 장 실패해도 계속 */ }
     }
   }
-  if (story.length === 0 && filled > 0) return { bookId: append!.bookId, lastLine: append!.afterLine, added: 0, filled }
-  if (story.length === 0) throw new Error(append ? '새로 붙일 이야기가 아직 없어요. [만든 책 열기]나 [학생들에게 책 보여 주기]는 그대로 쓸 수 있어요.' : '보낼 이야기가 아직 없어요')
+  if (story.length === 0 && append) return { bookId: append.bookId, lastLine: append.afterLine, added: 0, filled }
+  if (story.length === 0) throw new Error('보낼 이야기가 아직 없어요')
 
   let bookId: string
   let start = 0
@@ -68,7 +81,7 @@ export async function sendRoomToBook(
     rows.push({
       book_id: bookId,
       page_number: start + i + 1,
-      text_layers: { content: l.t, imageFit: 'contain', fontSize: p?.font ?? 22 },
+      text_layers: { content: l.t, imageFit: 'contain', fontSize: p?.font ?? 22, imgSig: sigOf(p?.img ?? null, p?.font ?? 22) },
       layout_preset: 'full',
       media_url: mediaUrl,
       media_type: mediaUrl ? ('image' as const) : null,
