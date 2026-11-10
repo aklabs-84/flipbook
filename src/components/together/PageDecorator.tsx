@@ -234,7 +234,7 @@ function DrawBoard({ onCancel, onDone }: { onCancel: () => void; onDone: (c: HTM
   return (
     <div className="pd-draw" role="dialog" aria-label="그리기">
       <div className="box">
-        <canvas ref={cv} width={640} height={400}
+        <canvas ref={cv} width={480} height={640}
           onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
         <div className="pd-colors">
           {COLORS.map(c => (
