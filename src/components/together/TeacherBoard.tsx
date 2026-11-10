@@ -64,8 +64,8 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
 
   async function toggle(code: string) {
     if (openCode === code) { setOpenCode(''); return }
-    const r = await run(async () => ({ ls: await teacherRoom(tc, code), ms: await teacherMembers(tc, code) }))
-    if (r) { setLines(r.ls); setMems(r.ms); setOpenCode(code) }
+    const r = await run(async () => ({ ls: await teacherRoom(tc, code), ms: await teacherMembers(tc, code), sent: await teacherGetSent(tc, code) }))
+    if (r) { setLines(r.ls); setMems(r.ms); setOpenCode(code); setBookId(r.sent.book ?? ''); setSentCode(r.sent.book ? code : '') }
   }
 
   async function hide(l: TeacherLine) {
@@ -85,13 +85,16 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
 
   async function doSend(r: TeacherRoomSummary, append?: { bookId: string; afterLine: number }) {
     if (!user) return
+    if (append) { setBookId(append.bookId); setSentCode(r.code) }
     const res = await run(async () => {
       const ls = await teacherRoom(tc, r.code)
       const ps = await teacherPages(tc, r.code)
+      if (append && !ls.some(l => !l.sys && !l.hidden && l.id > append.afterLine)) return null
       const out: SendResult = await sendRoomToBook(user.id, r.name, ls, ps, append)
       await teacherSetSent(tc, r.code, out.bookId, out.lastLine)
       return out
     })
+    if (res === null) { setInfo('새로 붙일 이야기가 없어요. 이미 만든 책을 열거나 학생들에게 보여 줄 수 있어요 👉 오른쪽 [방 관리]'); return }
     if (res) {
       setBookId(res.bookId); setSentCode(r.code)
       setInfo(append ? `기존 책 뒤에 ${res.added}쪽을 이어 붙였어요! [만든 책 열기]로 확인해 보세요.` : '플립북을 만들었어요! [만든 책 열기]로 이어서 꾸밀 수 있어요.')
@@ -221,42 +224,53 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
                 {openCode === r.code && (
                   <tr className="det">
                     <td colSpan={6}>
-                      {lines.filter(l => !l.sys).length === 0 && <div className="empty">아직 쓴 글이 없어요.</div>}
-                      {lines.filter(l => !l.sys).map(l => (
-                        <div key={l.id} className={`ln${l.hidden ? ' hid' : ''}`}>
-                          <span><b>{l.who}</b>: {l.t}</span>
-                          <button type="button" onClick={() => void hide(l)}>{l.hidden ? '다시 보이기' : '숨기기'}</button>
+                      <div className="detgrid">
+                        <div className="card" style={{ margin: 0 }}>
+                          <b>📖 이야기 목록</b>
+                          {lines.filter(l => !l.sys).length === 0 && <div className="empty">아직 쓴 글이 없어요.</div>}
+                          {lines.filter(l => !l.sys).map(l => (
+                            <div key={l.id} className={`ln${l.hidden ? ' hid' : ''}`}>
+                              <span><b>{l.who}</b>: {l.t}</span>
+                              <button type="button" onClick={() => void hide(l)}>{l.hidden ? '다시 보이기' : '숨기기'}</button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                      {mems.length > 0 && (
-                        <div style={{ marginTop: 10 }}>
-                          <b>학생 자리</b>
-                          <div className="row" style={{ marginTop: 6 }}>
-                            {mems.map(m => (
-                              <span key={m.seq} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                {m.nickname}
-                                {m.released
-                                  ? <em style={{ fontSize: 14 }}>(다시 들어오기 기다림)</em>
-                                  : <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void release(r.code, m)}>자리 비워 주기</button>}
-                              </span>
-                            ))}
+                        <aside className="side">
+                          {mems.length > 0 && (
+                            <div className="card" style={{ margin: 0 }}>
+                              <b>👥 학생 자리</b>
+                              <div style={{ marginTop: 6 }}>
+                                {mems.map(m => (
+                                  <div key={m.seq} className="mem">
+                                    <span>{m.nickname}</span>
+                                    {m.released
+                                      ? <em style={{ fontSize: 14 }}>(다시 들어오기 기다림)</em>
+                                      : <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void release(r.code, m)}>자리 비워 주기</button>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div className="card" style={{ margin: 0 }}>
+                            <b>📚 책 만들기</b>
+                            <div className="col">
+                              <button className="btn sm" type="button" disabled={busy} onClick={() => void sendBook(r)}>📖 플립북으로 보내기</button>
+                              {bookId && sentCode === r.code && (
+                                <a className="btn ghost sm" href={`/edit/${bookId}?from=together`} target="_blank" onClick={e => { e.preventDefault(); window.open(`/edit/${bookId}?from=together`, '_blank') }}>만든 책 열기</a>
+                              )}
+                              {bookId && sentCode === r.code && (
+                                <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void showToStudents(r)}>👦 학생들에게 책 보여 주기</button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      <div style={{ marginTop: 10 }}>
-                        <button className="btn sm" type="button" disabled={busy} onClick={() => void sendBook(r)}>📖 플립북으로 보내기</button>
-                        {bookId && sentCode === r.code && (
-                          <a className="btn ghost sm" style={{ marginLeft: 8 }} href={`/edit/${bookId}?from=together`} target="_blank" onClick={e => { e.preventDefault(); window.open(`/edit/${bookId}?from=together`, '_blank') }}>만든 책 열기</a>
-                        )}
-                        {bookId && sentCode === r.code && (
-                          <button className="btn ghost sm" style={{ marginLeft: 8 }} type="button" disabled={busy} onClick={() => void showToStudents(r)}>👦 학생들에게 책 보여 주기</button>
-                        )}
+                          {r.status !== 'done' && (
+                            <div className="card" style={{ margin: 0 }}>
+                              <b>🚪 방 닫기</b>
+                              <div className="col"><button className="btn red sm" type="button" onClick={() => void close(r.code)}>이 방 마무리하기</button></div>
+                            </div>
+                          )}
+                        </aside>
                       </div>
-                      {r.status !== 'done' && (
-                        <div style={{ marginTop: 10 }}>
-                          <button className="btn red sm" type="button" onClick={() => void close(r.code)}>이 방 마무리하기</button>
-                        </div>
-                      )}
                     </td>
                   </tr>
                 )}

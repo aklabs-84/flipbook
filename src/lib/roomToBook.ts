@@ -18,7 +18,7 @@ export async function sendRoomToBook(
 ): Promise<SendResult> {
   const all = lines.filter(l => !l.sys && !l.hidden)
   const story = append ? all.filter(l => l.id > append.afterLine) : all
-  if (story.length === 0) throw new Error(append ? '새로 붙일 이야기가 아직 없어요' : '보낼 이야기가 아직 없어요')
+  if (story.length === 0) throw new Error(append ? '새로 붙일 이야기가 아직 없어요. [만든 책 열기]나 [학생들에게 책 보여 주기]는 그대로 쓸 수 있어요.' : '보낼 이야기가 아직 없어요')
 
   let bookId: string
   let start = 0
