@@ -19,8 +19,10 @@
 }
 .wr .room{position:relative}
 .wr #room{display:block;width:100%;height:auto;border-radius:6px}
-.wr .obj{cursor:pointer;transition:transform .22s cubic-bezier(.3,1.4,.5,1);transform-box:fill-box;transform-origin:center bottom;outline:none}
-.wr .obj:hover,.wr .obj:focus-visible{transform:translateY(-6px)}
+.wr .obj{cursor:pointer;outline:none}
+/* 그림(.lift)만 떠오르고, 마우스를 감지하는 칸(.hit)은 가만히 둔다 — 떨림 방지 */
+.wr .obj .lift{transition:transform .22s cubic-bezier(.3,1.4,.5,1);transform-box:fill-box;transform-origin:center bottom}
+.wr .obj:hover .lift,.wr .obj:focus-visible .lift{transform:translateY(-6px)}
 .wr .obj .tag rect{fill:var(--ink);transition:fill .2s}
 .wr .obj .tag text{fill:#FFF8E7;font-size:17px;font-family:'Gowun Dodum',sans-serif;font-weight:700;text-anchor:middle}
 .wr .obj:hover .tag rect,.wr .obj:focus-visible .tag rect{fill:var(--tomato)}
@@ -59,6 +61,11 @@
 .wr .step.lock{opacity:.5}
 .wr .step h3{margin:0;font-size:20px}
 .wr .step p{margin:2px 0 10px}
+.wr .flow{list-style:none;margin:0 0 20px;padding:0;display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px}
+.wr .flow li{display:flex;flex-direction:column;gap:4px;border-top:2px dashed #E8D5A8;padding-top:10px}
+.wr .flow .no{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--ink);color:#FFF8E7;font-weight:700;font-size:15px}
+.wr .flow b{font-size:16px}
+.wr .flow small{font-size:14px;color:var(--ink-2);line-height:1.5}
 .wr .mission{background:var(--wall);padding:10px 14px;margin:8px 0 0;font-size:17px}
 .wr .seg{position:relative;display:inline-flex;gap:22px;border-bottom:2px solid var(--line);margin-bottom:12px}
 .wr .seg button{padding:6px 2px;font-weight:700;color:var(--ink-2)}
@@ -103,6 +110,9 @@ to{transform:rotate(-12deg) scale(1);opacity:1}
 .wr .dl dt{font-size:14px;color:var(--tomato);font-weight:700;margin-top:12px}
 .wr .dl dd{margin:0;border-bottom:1px dashed var(--line);padding-bottom:4px}
 .wr .note{font-size:15px;color:var(--ink-2);margin-top:14px}
+.wr .resetrow{margin-top:32px;padding-top:20px;border-top:2px dashed #E8D5A8;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.wr .resetrow .linkbtn{margin-top:0;font-size:16px}
+.wr .resetrow span{font-size:15px;color:var(--ink-2)}
 .wr .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:#FFF8E7;padding:10px 18px;opacity:0;pointer-events:none;transition:.25s;z-index:160;font-size:16px;max-width:92vw}
 .wr .toast.show{opacity:1;transform:translate(-50%,0)}
 .wr .foot{margin-top:36px;color:var(--ink-2);font-size:14px;border-top:1px dashed var(--line);padding-top:10px}
@@ -118,11 +128,11 @@ to{transform:rotate(-12deg) scale(1);opacity:1}
 .wr .ch.t-lively{--d:2.4s;--a:1.4;--h:1.3}
 .wr .ch *{transform-box:view-box}
 .wr .ch-bob,.wr .ch-head,.wr .ch-arm-l,.wr .ch-arm-r,.wr .ch-shadow{will-change:auto}
-.wr .ch-bob{transform-origin:80px 215px;animation:wr-breathe var(--d) ease-in-out infinite}
+.wr .ch-bob{transform-origin:100px 215px;animation:wr-breathe var(--d) ease-in-out infinite}
 .wr .ch-head{transform-origin:80px 118px;transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
 .wr .ch-arm-l{transform-origin:48px 134px;transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
 .wr .ch-arm-r{transform-origin:112px 134px;transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
-.wr .ch-shadow{transform-origin:80px 222px}
+.wr .ch-shadow{transform-origin:100px 222px}
 .wr .ch-brow{transform-box:fill-box;transform-origin:center;transition:transform .3s}
 .wr .ch-eyes{transform-box:fill-box;transform-origin:center;animation:wr-blink 5s infinite}
 .wr .ch-fx,.wr .ch-drop,.wr .ch-spark{transform-box:fill-box;transform-origin:center}
@@ -177,8 +187,7 @@ to{transform:rotate(-12deg) scale(1);opacity:1}
 
 /* 캐릭터 꾸미기 편집기 */
 .wr .look{display:grid;gap:12px}
-.wr .look .tools{display:flex;gap:8px;flex-wrap:wrap}
-.wr .look .tools button,.wr .look .tabs button,.wr .look .chips button{border:2px solid var(--ink);background:#fff;padding:5px 12px;font-size:15px;line-height:1.4;transition:background .15s,transform .15s}
+.wr .look .chips button,.wr .look .chips button{border:2px solid var(--ink);background:#fff;padding:5px 12px;font-size:15px;line-height:1.4;transition:background .15s,transform .15s}
 .wr .look .tools button:hover,.wr .look .chips button:hover:not(:disabled){background:var(--wall);transform:translateY(-2px)}
 .wr .look .tools .primary{background:var(--tomato);color:#fff;border-color:var(--tomato);font-weight:700}
 .wr .look .tabs{display:flex;gap:6px;flex-wrap:wrap}
@@ -192,6 +201,25 @@ to{transform:rotate(-12deg) scale(1);opacity:1}
 .wr .look .moods{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:14px;color:var(--ink-2)}
 .wr .look .moods button{border:1.5px solid var(--line);background:#fff;padding:3px 10px;font-size:14px}
 .wr .look .moods button.on{border-color:var(--ink);background:var(--wall)}
+/* 모습 고르기: 색 동그라미 */
+.wr .look .swatches{display:flex;gap:10px;flex-wrap:wrap}
+.wr .look .swatches button{width:44px;height:44px;border:2px solid var(--ink);border-radius:50%;transition:transform .15s,box-shadow .15s}
+.wr .look .swatches button:hover{transform:translateY(-3px)}
+.wr .look .swatches button.on{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--ink)}
+
+/* 처음 친구 고르기 */
+.wr .pick-kind{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+.wr .pick-kind button,.wr .pick-sample{border:2px solid var(--ink);background:#fff;padding:12px;text-align:center;font-size:20px;font-weight:700;color:var(--ink);transition:transform .15s,background .15s}
+.wr .pick-kind button:hover,.wr .pick-sample:hover{transform:translateY(-3px);background:var(--wall)}
+.wr .pick-kind small,.wr .pick-sample small{display:block;font-size:16px;font-weight:400;color:var(--ink-2);margin-top:4px}
+.wr .pick-samples{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.wr .pick-sample{padding:6px 6px 12px;font-size:18px}
+.wr .pick-sample.on{background:var(--ink);color:#fff}
+.wr .pick-sample.on small{color:#fff}
+.wr .pick-sample svg{width:100%;height:auto;display:block}
+.wr .backbtn{border:0;background:none;font-size:18px;color:var(--ink-2);padding:6px 0;text-decoration:underline}
+.wr .backbtn:hover{color:var(--tomato)}
+@media (max-width:520px){.wr .pick-samples{gap:8px}.wr .pick-sample{font-size:16px}}
 @media (min-width:981px){.wr .sticky{position:sticky;top:16px}}
 
 /* 방 화면: 경계선 끌기 + 오른쪽 칸 전체화면 */
@@ -209,3 +237,10 @@ to{transform:rotate(-12deg) scale(1);opacity:1}
 .wr .panel.full{position:fixed;inset:0;z-index:150;overflow:auto;background:var(--page);padding:56px 32px 80px}
 .wr .panel.full > *:not(.fullbtn){max-width:880px;margin-left:auto;margin-right:auto}
 .wr .panel.full .fullbtn{position:fixed;top:14px;right:18px;z-index:151}
+
+/* 내 글 책장 */
+.wr .lib{margin-top:36px;padding-top:24px;border-top:2px dashed #E8D5A8}
+.wr .lib h3{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:22px;margin:0 0 4px}
+.wr .lib .pages .t{background:none;border:0;cursor:pointer;font:inherit;font-size:15px;color:var(--ink-2);text-decoration:underline;padding:4px 8px}
+.wr .lib .pages .t:hover{color:var(--tomato)}
+.wr .lib .howto{margin:16px 0 0;padding-left:22px;font-size:15px;line-height:1.7;color:var(--ink-2)}

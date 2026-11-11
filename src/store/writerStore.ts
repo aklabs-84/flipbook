@@ -1,15 +1,18 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { EMPTY_STATS } from '../types/writer'
-import type { GenreId, Look, Persona, QuestRecord, StampKind, Stats, Writer, WriterEventKind } from '../types/writer'
+import type { GenreId, LibraryItem, Look, Persona, QuestRecord, StampKind, Stats, Writer, WriterEventKind } from '../types/writer'
 import { normalizeLook } from '../data/charParts'
-import { applyXp, MIN_REASON, splitStanzas, STAMP_XP } from '../lib/writerPrompt'
+import { applyXp, LIBRARY_XP, MAX_LIB_TEXT, MAX_LIBRARY, MIN_REASON, splitStanzas, STAMP_XP } from '../lib/writerPrompt'
 
 // 1단계: 브라우저(localStorage)에 저장. DB 표 승인 후 같은 모양으로 Supabase에 옮긴다.
 interface WriterState {
     writer: Writer | null
     quests: QuestRecord[]
     activeQuestId: string | null
+    library: LibraryItem[]
+    // 경험치를 이미 받은 글 표 (지웠다 다시 넣어도 경험치는 한 번만)
+    libXp: string[]
     lastGain: { xp: number; levelUp: boolean } | null
     // 캐릭터 표정용 방금 일어난 일 (저장하지 않음)
     lastEvent: { kind: WriterEventKind; t: number } | null
@@ -21,6 +24,9 @@ interface WriterState {
     stamp: (questId: string, index: number, kind: StampKind, reason: string, fixedText?: string) => boolean
     finishQuest: (questId: string) => void
     setActive: (id: string | null) => void
+    // 책상·이야기 교실의 글을 책장에 넣는다. 'added' 새로 넣음 / 'updated' 같은 글을 새 내용으로 바꿈 / 'full' 책장이 가득 참
+    addToLibrary: (item: Omit<LibraryItem, 'id' | 'addedAt'>) => 'added' | 'updated' | 'full'
+    removeFromLibrary: (id: string) => void
     reset: () => void
 }
 
@@ -34,6 +40,8 @@ export const useWriterStore = create<WriterState>()(
             writer: null,
             quests: [],
             activeQuestId: null,
+            library: [],
+            libXp: [],
             lastGain: null,
             lastEvent: null,
 
@@ -89,9 +97,34 @@ export const useWriterStore = create<WriterState>()(
             finishQuest: (questId) =>
                 set((s) => ({ quests: s.quests.map((q) => (q.id === questId && q.stanzas.every((st) => st.stamp) ? { ...q, status: 'done' } : q)) })),
 
+            addToLibrary: (item) => {
+                const { library, writer, libXp } = get()
+                const text = item.text.trim().slice(0, MAX_LIB_TEXT)
+                const old = library.find((x) => x.source === item.source && x.ref === item.ref)
+                if (old) {
+                    set({ library: library.map((x) => (x.id === old.id ? { ...x, title: item.title, text, addedAt: new Date().toISOString() } : x)) })
+                    return 'updated'
+                }
+                if (library.length >= MAX_LIBRARY) return 'full'
+                const entry: LibraryItem = { ...item, text, id: uid(), addedAt: new Date().toISOString() }
+                const key = `${item.source}:${item.ref}`
+                if (writer && !libXp.includes(key)) {
+                    const { level, xp } = applyXp(writer.level, writer.xp, LIBRARY_XP)
+                    set({
+                        library: [...library, entry],
+                        libXp: [...libXp, key],
+                        writer: { ...writer, level, xp },
+                        lastGain: { xp: LIBRARY_XP, levelUp: level > writer.level },
+                        lastEvent: { kind: level > writer.level ? 'levelup' : 'paste', t: Date.now() },
+                    })
+                } else set({ library: [...library, entry] })
+                return 'added'
+            },
+            removeFromLibrary: (id) => set((s) => ({ library: s.library.filter((x) => x.id !== id) })),
+
             setActive: (id) => set({ activeQuestId: id }),
-            reset: () => set({ writer: null, quests: [], activeQuestId: null, lastGain: null, lastEvent: null }),
+            reset: () => set({ writer: null, quests: [], activeQuestId: null, library: [], libXp: [], lastGain: null, lastEvent: null }),
         }),
-        { name: 'ai-writer-v1', partialize: (s) => ({ writer: s.writer, quests: s.quests, activeQuestId: s.activeQuestId }) },
+        { name: 'ai-writer-v1', partialize: (s) => ({ writer: s.writer, quests: s.quests, activeQuestId: s.activeQuestId, library: s.library, libXp: s.libXp }) },
     ),
 )

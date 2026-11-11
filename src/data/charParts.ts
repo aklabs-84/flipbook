@@ -1,120 +1,120 @@
 import type { Look } from '../types/writer'
 
-export interface Part { id: string; label: string; unlockLevel: number; color?: string }
+// 작가 친구 도감: 처음 고르는 9명(사람 6 + 도구 3)과 꾸미기 선택지.
+// 저장은 브라우저(localStorage)에만 하므로 서버 비용은 0이다.
 
-export const GENDER_PARTS: Part[] = [
-    { id: 'f', label: '여성', unlockLevel: 1 },
-    { id: 'm', label: '남성', unlockLevel: 1 },
-]
-export const SKIN_PARTS: Part[] = [
-    { id: 's1', label: '밝은 살색', unlockLevel: 1, color: '#FFE0C2' },
-    { id: 's2', label: '보통 살색', unlockLevel: 1, color: '#F5C9A0' },
-    { id: 's3', label: '구릿빛', unlockLevel: 1, color: '#E3A97C' },
-    { id: 's4', label: '진한 살색', unlockLevel: 1, color: '#B97B52' },
-    { id: 's5', label: '아주 진한 살색', unlockLevel: 1, color: '#8A5636' },
-]
-// 그림자 색 (피부색마다 손으로 고른 값)
-export const SKIN_SHADE: Record<string, string> = { s1: '#E9B995', s2: '#DDA97F', s3: '#C98B5E', s4: '#9A6140', s5: '#6E3F26' }
+export interface Swatch { color: string; label: string }
+export interface Deco { id: string; label: string; unlockLevel: number; kinds: Look['kind'][] }
+export interface Sample { id: string; name: string; hint: string; look: Look }
 
-export const FACE_PARTS: Part[] = [
-    { id: 'round', label: '동글', unlockLevel: 1 },
-    { id: 'oval', label: '갸름', unlockLevel: 1 },
-    { id: 'square', label: '네모', unlockLevel: 1 },
-    { id: 'heart', label: '하트', unlockLevel: 1 },
+export const SKINS: Swatch[] = [
+    { color: '#F6D3B5', label: '밝은 살색' },
+    { color: '#EBB98F', label: '보통 살색' },
+    { color: '#D69B6E', label: '구릿빛' },
+    { color: '#A86B45', label: '진한 살색' },
+    { color: '#6E3F26', label: '짙은 갈색' },
 ]
-export const EYES_PARTS: Part[] = [
-    { id: 'dot', label: '동그란 눈', unlockLevel: 1 },
-    { id: 'big', label: '큰 눈', unlockLevel: 1 },
-    { id: 'narrow', label: '가는 눈', unlockLevel: 1 },
-    { id: 'smile', label: '웃는 눈', unlockLevel: 1 },
-    { id: 'sleepy', label: '졸린 눈', unlockLevel: 1 },
+// 사람 친구는 옷 색, 도구 친구는 몸 색으로 쓴다
+export const COLORS: Swatch[] = [
+    { color: '#EF6A55', label: '토마토' },
+    { color: '#F7C844', label: '머스터드' },
+    { color: '#7CC15A', label: '초록' },
+    { color: '#6DBBE0', label: '하늘' },
+    { color: '#B792E0', label: '보라' },
+    { color: '#EF8B7B', label: '살구' },
 ]
-export const BROWS_PARTS: Part[] = [
-    { id: 'normal', label: '보통', unlockLevel: 1 },
-    { id: 'thick', label: '굵은', unlockLevel: 1 },
-    { id: 'sad', label: '처진', unlockLevel: 1 },
-    { id: 'up', label: '올라간', unlockLevel: 1 },
-]
-export const NOSE_PARTS: Part[] = [
-    { id: 'dot', label: '점', unlockLevel: 1 },
-    { id: 'round', label: '동글', unlockLevel: 1 },
-    { id: 'point', label: '뾰족', unlockLevel: 1 },
-]
-export const MOUTH_PARTS: Part[] = [
-    { id: 'smile', label: '미소', unlockLevel: 1 },
-    { id: 'grin', label: '활짝', unlockLevel: 1 },
-    { id: 'small', label: '작은 입', unlockLevel: 1 },
-    { id: 'flat', label: '일자', unlockLevel: 1 },
-]
-export const HAIR_PARTS: Part[] = [
-    { id: 'short', label: '짧은 머리', unlockLevel: 1 },
-    { id: 'bob', label: '단발', unlockLevel: 1 },
-    { id: 'long', label: '긴 머리', unlockLevel: 1 },
-    { id: 'twin', label: '양갈래', unlockLevel: 1 },
-    { id: 'bald', label: '민머리', unlockLevel: 1 },
-    { id: 'braid', label: '땋은 머리', unlockLevel: 2 },
-    { id: 'bun', label: '묶음 머리', unlockLevel: 2 },
-    { id: 'curly', label: '곱슬머리', unlockLevel: 3 },
-]
-export const HAIR_COLOR_PARTS: Part[] = [
-    { id: 'black', label: '검정', unlockLevel: 1, color: '#3A2A24' },
-    { id: 'brown', label: '갈색', unlockLevel: 1, color: '#7A4B2A' },
-    { id: 'blonde', label: '금발', unlockLevel: 1, color: '#E3B65B' },
-    { id: 'red', label: '빨강', unlockLevel: 2, color: '#C8502E' },
-    { id: 'purple', label: '보라', unlockLevel: 3, color: '#7A5BC4' },
-]
-export const BODY_PARTS: Part[] = [
-    { id: 'mustard', label: '노랑 옷', unlockLevel: 1, color: '#F7C844' },
-    { id: 'sky', label: '하늘 옷', unlockLevel: 1, color: '#8EC5E6' },
-    { id: 'coral', label: '분홍 옷', unlockLevel: 2, color: '#F2A08F' },
-    { id: 'lilac', label: '연보라 옷', unlockLevel: 2, color: '#B9A4E0' },
-    { id: 'grass', label: '초록 옷', unlockLevel: 3, color: '#8FCB6E' },
-    { id: 'navy', label: '남색 옷', unlockLevel: 4, color: '#4A5A78' },
-]
-export const HAT_PARTS: Part[] = [
-    { id: 'none', label: '없음', unlockLevel: 1 },
-    { id: 'cap', label: '모자', unlockLevel: 1 },
-    { id: 'ribbon', label: '리본', unlockLevel: 1 },
-    { id: 'beret', label: '베레모', unlockLevel: 2 },
-    { id: 'flower', label: '꽃핀', unlockLevel: 2 },
-    { id: 'phones', label: '헤드폰', unlockLevel: 3 },
-    { id: 'crown', label: '작은 왕관', unlockLevel: 4 },
-]
-export const ACC_PARTS: Part[] = [
-    { id: 'none', label: '없음', unlockLevel: 1 },
-    { id: 'glasses', label: '안경', unlockLevel: 1 },
-    { id: 'freckle', label: '주근깨', unlockLevel: 1 },
-    { id: 'scarf', label: '목도리', unlockLevel: 2 },
-    { id: 'bowtie', label: '나비넥타이', unlockLevel: 2 },
-    { id: 'round', label: '동그란 안경', unlockLevel: 3 },
-    { id: 'earring', label: '귀걸이', unlockLevel: 3 },
-    { id: 'necklace', label: '목걸이', unlockLevel: 4 },
-    { id: 'cape', label: '망토', unlockLevel: 4 },
-]
-export const HOLD_PARTS: Part[] = [
-    { id: 'pen', label: '펜', unlockLevel: 1 },
-    { id: 'none', label: '없음', unlockLevel: 1 },
-    { id: 'notebook', label: '공책', unlockLevel: 2 },
-    { id: 'wand', label: '마법봉', unlockLevel: 3 },
+export const HAIR_COLORS = ['#2F211C', '#4B3321', '#5A3A22', '#8B4A2B']
+
+export const PERSON_BASES = ['bob', 'buns', 'tuft', 'short']
+export const TOOL_BASES = ['pencil', 'book', 'ink']
+export const TOOL_NAME: Record<string, string> = { pencil: '연필', book: '책', ink: '잉크병' }
+
+// 레벨이 오르면 하나씩 열린다 (이미 낀 것은 그대로 두고, 빼는 건 언제나 가능)
+export const DECOS: Deco[] = [
+    { id: 'bow', label: '리본', unlockLevel: 1, kinds: ['person', 'tool'] },
+    { id: 'glasses', label: '동그란 안경', unlockLevel: 2, kinds: ['person', 'tool'] },
+    { id: 'star', label: '별 스티커', unlockLevel: 2, kinds: ['tool'] },
+    { id: 'hat', label: '베레모', unlockLevel: 3, kinds: ['person'] },
+    { id: 'cape', label: '망토', unlockLevel: 4, kinds: ['person'] },
+    { id: 'crown', label: '왕관', unlockLevel: 5, kinds: ['person', 'tool'] },
+    { id: 'pet', label: '먹물 친구', unlockLevel: 5, kinds: ['person'] },
 ]
 
-export const DEFAULT_LOOK: Look = {
-    gender: 'm', skin: 's1', face: 'round', eyes: 'dot', brows: 'normal', nose: 'dot', mouth: 'smile',
-    hair: 'short', hairColor: 'black', body: 'mustard', hat: 'none', accessory: 'none', hold: 'pen',
+const person = (gender: Look['gender'], base: string, hairColor: string, body: string, deco: string[] = []): Look =>
+    ({ kind: 'person', gender, base, hairColor, skin: SKINS[1].color, body, deco })
+const tool = (base: string, body: string): Look =>
+    ({ kind: 'tool', gender: 'f', base, hairColor: HAIR_COLORS[0], skin: SKINS[1].color, body, deco: [] })
+
+export const SAMPLES: { girl: Sample[]; boy: Sample[]; tool: Sample[] } = {
+    girl: [
+        { id: 'g-bob', name: '단발 리본', hint: '리본을 단 단발머리', look: person('f', 'bob', '#2F211C', '#EF8B7B', ['bow']) },
+        { id: 'g-buns', name: '양갈래', hint: '귀여운 양갈래 머리', look: person('f', 'buns', '#8B4A2B', '#B792E0') },
+        { id: 'g-glass', name: '안경 친구', hint: '똑똑해 보이는 안경', look: person('f', 'bob', '#5A3A22', '#7CC15A', ['glasses']) },
+    ],
+    boy: [
+        { id: 'b-tuft', name: '삐죽 머리', hint: '머리카락이 삐죽!', look: person('m', 'tuft', '#2F211C', '#6DBBE0') },
+        { id: 'b-short', name: '단정한 머리', hint: '깔끔한 짧은 머리', look: person('m', 'short', '#4B3321', '#F7C844') },
+        { id: 'b-beret', name: '베레모 친구', hint: '멋진 베레모', look: person('m', 'short', '#2F211C', '#7CC15A', ['hat']) },
+    ],
+    tool: [
+        { id: 't-pencil', name: '연필', hint: '쓱쓱 글을 쓰는 연필', look: tool('pencil', '#F7C844') },
+        { id: 't-book', name: '책', hint: '이야기가 가득한 책', look: tool('book', '#EF6A55') },
+        { id: 't-ink', name: '잉크병', hint: '먹물이 찰랑찰랑', look: tool('ink', '#6DBBE0') },
+    ],
 }
 
-export const PARTS_BY_FIELD: Record<keyof Look, Part[]> = {
-    gender: GENDER_PARTS, skin: SKIN_PARTS, face: FACE_PARTS, eyes: EYES_PARTS, brows: BROWS_PARTS, nose: NOSE_PARTS,
-    mouth: MOUTH_PARTS, hair: HAIR_PARTS, hairColor: HAIR_COLOR_PARTS, body: BODY_PARTS, hat: HAT_PARTS, accessory: ACC_PARTS, hold: HOLD_PARTS,
+export const DEFAULT_LOOK: Look = SAMPLES.girl[0].look
+
+const HEX = /^#[0-9A-Fa-f]{6}$/
+const inList = (list: Swatch[] | string[], v: unknown): v is string =>
+    typeof v === 'string' && HEX.test(v) && (list as (Swatch | string)[]).some((s) => (typeof s === 'string' ? s : s.color).toLowerCase() === v.toLowerCase())
+
+// 옛 부품 이름(예전 캐릭터) → 새 모양. 옛 저장 내용도 그대로 읽히게 한다
+const OLD_SKIN: Record<string, string> = { s1: SKINS[0].color, s2: SKINS[1].color, s3: SKINS[2].color, s4: SKINS[3].color, s5: SKINS[4].color }
+const OLD_HAIR: Record<string, string> = { short: 'short', bob: 'bob', long: 'bob', braid: 'bob', twin: 'buns', bun: 'buns', curly: 'tuft', bald: 'short' }
+const OLD_HAIR_COLOR: Record<string, string> = { black: '#2F211C', brown: '#5A3A22', blonde: '#8B4A2B', red: '#8B4A2B', purple: '#2F211C' }
+const OLD_BODY: Record<string, string> = { mustard: '#F7C844', sky: '#6DBBE0', coral: '#EF8B7B', lilac: '#B792E0', grass: '#7CC15A', navy: '#6DBBE0' }
+
+type Loose = Record<string, unknown>
+
+export function normalizeLook(raw: unknown): Look {
+    const l = (raw && typeof raw === 'object' ? raw : {}) as Loose
+    const isNew = l.kind === 'person' || l.kind === 'tool'
+    if (!isNew) return migrateOld(l)
+    const kind = l.kind as Look['kind']
+    const bases = kind === 'tool' ? TOOL_BASES : PERSON_BASES
+    const deco = Array.isArray(l.deco) ? l.deco.filter((d): d is string => typeof d === 'string' && DECOS.some((x) => x.id === d && x.kinds.includes(kind))) : []
+    return {
+        kind,
+        gender: l.gender === 'm' ? 'm' : 'f',
+        base: typeof l.base === 'string' && bases.includes(l.base) ? l.base : bases[0],
+        hairColor: inList(HAIR_COLORS, l.hairColor) ? l.hairColor : HAIR_COLORS[0],
+        skin: inList(SKINS, l.skin) ? l.skin : SKINS[1].color,
+        body: inList(COLORS, l.body) ? l.body : COLORS[1].color,
+        deco: Array.from(new Set(deco)),
+    }
 }
 
-// 옛 저장 내용(body·hat·accessory만 있음)이나 알 수 없는 값은 기본값으로 채운다
-export function normalizeLook(look: Partial<Look> | null | undefined): Look {
-    const out = { ...DEFAULT_LOOK }
-    if (!look) return out
-    ;(Object.keys(PARTS_BY_FIELD) as (keyof Look)[]).forEach((k) => {
-        const v = look[k]
-        if (typeof v === 'string' && PARTS_BY_FIELD[k].some((p) => p.id === v)) (out as Record<string, string>)[k] = v
-    })
-    return out
+function migrateOld(l: Loose): Look {
+    const s = (k: string) => (typeof l[k] === 'string' ? (l[k] as string) : '')
+    const gender: Look['gender'] = s('gender') === 'm' ? 'm' : 'f'
+    const deco: string[] = []
+    if (['glasses', 'round'].includes(s('accessory'))) deco.push('glasses')
+    if (s('accessory') === 'cape') deco.push('cape')
+    if (s('hat') === 'beret') deco.push('hat')
+    if (s('hat') === 'crown') deco.push('crown')
+    if (s('hat') === 'ribbon') deco.push('bow')
+    return {
+        kind: 'person',
+        gender,
+        base: OLD_HAIR[s('hair')] ?? (gender === 'm' ? 'short' : 'bob'),
+        hairColor: OLD_HAIR_COLOR[s('hairColor')] ?? HAIR_COLORS[0],
+        skin: OLD_SKIN[s('skin')] ?? SKINS[1].color,
+        body: OLD_BODY[s('body')] ?? COLORS[1].color,
+        deco,
+    }
+}
+
+export function unlockedDecos(kind: Look['kind'], level: number) {
+    return DECOS.filter((d) => d.kinds.includes(kind) && d.unlockLevel <= level)
 }

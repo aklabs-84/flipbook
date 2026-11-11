@@ -6,6 +6,7 @@ import {
 import StoryPanel from './StoryPanel'
 import PageDecorator from './PageDecorator'
 import { useAsk } from './useAsk'
+import { useWriterStore } from '../../store/writerStore'
 
 type Phase = 'idle' | 'loading' | 'empty' | 'new' | 'fail'
 
@@ -42,6 +43,15 @@ export default function ChatRoom({ session, onLeave }: Props) {
   const [storyOpen, setStoryOpen] = useState(false)
   const [view, setView] = useState<'chat' | 'pages'>('chat')
   const { ask, box: leaveBox } = useAsk()
+  const addToLibrary = useWriterStore(st => st.addToLibrary)
+  const [shared, setShared] = useState('')
+  // 내가 쓴 문장만 모아 AI 작가 책장에 복사한다 (이 기기 안에만 저장)
+  const showWriter = () => {
+    const mine = lines.filter(l => !l.sys && l.w === me).map(l => l.t).join('\n\n')
+    if (mine.trim().length < 10) { setShared('내가 쓴 문장이 아직 적어요. 조금 더 쓰고 눌러 주세요.'); return }
+    const r = addToLibrary({ source: 'together', ref: code, title: `${name || '이야기 교실'}에서 내가 쓴 문장`, text: mine })
+    setShared(r === 'full' ? 'AI 작가 책장이 가득 찼어요.' : r === 'updated' ? '책장의 글을 새 내용으로 바꿨어요.' : 'AI 작가에게 보여줬어요! 경험치도 받았어요.')
+  }
 
   const verRef = useRef(-1)
   const sinceRef = useRef(0)
@@ -217,10 +227,12 @@ export default function ChatRoom({ session, onLeave }: Props) {
         <span className="mode">{mode === 'challenge' ? `도전 모드 · 한 차례 ${limit}초` : '여유 모드 · 시간 제한 없음'}</span>
         <button className="fbtn" type="button" onClick={() => setStoryOpen(true)}>📖 전체 이야기</button>
         <button className="fbtn" style={{ display: 'inline-block' }} type="button" onClick={() => setView('pages')}>🎨 내 쪽 꾸미기</button>
+        <button className="fbtn" style={{ display: 'inline-block' }} type="button" onClick={showWriter}>🤖 내 문장 AI 작가에게</button>
         {bookId && <a className="fbtn" style={{ display: 'inline-block' }} href={`/view/${bookId}`} target="_blank" rel="noopener">📚 완성된 책 보기</a>}
         <button className="link" type="button" onClick={() => ask('이 방에서 나갈까요? (같은 별명으로 다시 들어오려면 선생님께 말해야 해요)', onLeave)}>나가기</button>
       </h2>
       {leaveBox}
+      {shared && <p className="sub" role="status">{shared} <a href="/writer">AI 작가 방으로 가기 →</a></p>}
       <p className="sub hide-m">친구가 글을 쓰면 [새 글 확인]을 눌러 가져와요. 내 차례가 되면 쓰기 칸이 열려요.</p>
       <div className="members">
         {members.map(m => (

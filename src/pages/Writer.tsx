@@ -3,15 +3,16 @@ import { Link, useNavigate } from 'react-router-dom'
 import '../styles/writer.css'
 import { useWriterStore } from '../store/writerStore'
 import { useAuthStore } from '../store/authStore'
-import Character from '../components/writer/Character'
+import Character, { CHAR_VIEWBOX } from '../components/writer/Character'
 import LookEditor from '../components/writer/LookEditor'
-import { DEFAULT_LOOK, normalizeLook } from '../data/charParts'
+import { DEFAULT_LOOK, SAMPLES, normalizeLook } from '../data/charParts'
 import { EVENT_MOOD, getTemper, moodLine } from '../lib/writerLook'
 import { GENRES, getGenre } from '../data/genres'
 import { SAFETY_GUIDE } from '../data/safetyGuide'
 import { checkPrivacy, maskHits } from '../lib/privacyCheck'
 import { buildPrompt, MAX_RAW, MAX_SEED, MIN_REASON, STAMP_LABEL, STAMP_XP, xpForNext } from '../lib/writerPrompt'
 import { sendToBook } from '../lib/writerBook'
+import { buildExportText, downloadText, exportSources, privacyProblems } from '../lib/writerLibrary'
 import type { GenreId, Look, Mood, StampKind } from '../types/writer'
 
 type View = 'quest' | 'dex' | 'desk' | 'writer'
@@ -30,8 +31,13 @@ export default function Writer() {
 }
 
 /* ───────── 작가 만들기 ───────── */
+type Step = 'kind' | 'gender' | 'sample' | 'detail'
+
 function CreateWriter() {
     const createWriter = useWriterStore((s) => s.createWriter)
+    const [step, setStep] = useState<Step>('kind')
+    const [kind, setKind] = useState<'person' | 'tool'>('person')
+    const [gender, setGender] = useState<'girl' | 'boy'>('girl')
     const [name, setName] = useState('')
     const [persona, setPersona] = useState({ personality: '', tone: '', likes: '', avoids: '' })
     const [look, setLook] = useState<Look>(DEFAULT_LOOK)
@@ -42,6 +48,11 @@ function CreateWriter() {
         ['likes', '좋아하는 것', '예: 비 오는 날, 고양이'],
         ['avoids', '쓰지 않는 것', '예: 어려운 한자어'],
     ]
+    const list = kind === 'tool' ? SAMPLES.tool : SAMPLES[gender]
+    const pickSample = (l: Look) => { setLook(l); setPmood('happy'); setStep('detail') }
+    const back = () => setStep(step === 'detail' ? 'sample' : step === 'sample' ? (kind === 'person' ? 'gender' : 'kind') : 'kind')
+    const stepNo = { kind: 1, gender: 2, sample: 3, detail: 4 }[step]
+
     return (
         <div className="wr" style={{ minHeight: '100vh' }}>
             <div className="wrap">
@@ -49,26 +60,58 @@ function CreateWriter() {
                 <div className="grid">
                     <section className="sticky">
                         <div className="room" style={{ background: 'var(--wall)', padding: 24 }}>
-                            <svg viewBox="0 0 160 230" style={{ width: '100%', maxHeight: 420 }} role="img" aria-label="내 AI 작가"><Character look={look} mood={pmood} temper={getTemper(persona)} /></svg>
+                            <svg viewBox={CHAR_VIEWBOX} style={{ width: '100%', maxHeight: 420 }} role="img" aria-label="내 AI 작가"><Character look={look} mood={pmood} temper={getTemper(persona)} /></svg>
                         </div>
                     </section>
                     <aside className="panel">
-                        <p className="kicker">1단계</p>
-                        <h2>이름과 성격 정하기</h2>
-                        <p className="lead">진짜 이름 말고 별명을 지어 주세요. 이 설정서가 AI에게 보내는 글 맨 앞에 붙어요.</p>
-                        <label className="dl"><dt>작가 이름 (별명)</dt>
-                            <input className="wr-input" value={name} maxLength={12} onChange={(e) => setName(e.target.value)} placeholder="예: 달이" />
-                        </label>
-                        {fields.map(([k, label, ph]) => (
-                            <label key={k} className="dl"><dt>{label}</dt>
-                                <input className="wr-input" value={persona[k]} maxLength={40} placeholder={ph} onChange={(e) => setPersona({ ...persona, [k]: e.target.value })} />
+                        <p className="kicker">{stepNo} / 4 단계</p>
+                        {step !== 'kind' && <button type="button" className="backbtn" onClick={back}>← 뒤로</button>}
+
+                        {step === 'kind' && (<>
+                            <h2>어떤 친구와 글을 쓸까요?</h2>
+                            <div className="pick-kind">
+                                <button type="button" onClick={() => { setKind('person'); setStep('gender') }}>사람 친구<small>동글동글 작가</small></button>
+                                <button type="button" onClick={() => { setKind('tool'); setLook(SAMPLES.tool[0].look); setStep('sample') }}>도구 친구<small>연필·책·잉크병</small></button>
+                            </div>
+                        </>)}
+
+                        {step === 'gender' && (<>
+                            <h2>여자 친구? 남자 친구?</h2>
+                            <div className="pick-kind">
+                                <button type="button" onClick={() => { setGender('girl'); setLook(SAMPLES.girl[0].look); setStep('sample') }}>여자 친구</button>
+                                <button type="button" onClick={() => { setGender('boy'); setLook(SAMPLES.boy[0].look); setStep('sample') }}>남자 친구</button>
+                            </div>
+                        </>)}
+
+                        {step === 'sample' && (<>
+                            <h2>마음에 드는 친구를 골라요</h2>
+                            <div className="pick-samples">
+                                {list.map((sm) => (
+                                    <button key={sm.id} type="button" className="pick-sample" onClick={() => pickSample(sm.look)}>
+                                        <svg viewBox={CHAR_VIEWBOX} aria-hidden="true"><Character look={sm.look} mood="idle" /></svg>
+                                        {sm.name}<small>{sm.hint}</small>
+                                    </button>
+                                ))}
+                            </div>
+                        </>)}
+
+                        {step === 'detail' && (<>
+                            <h2>이름과 성격 정하기</h2>
+                            <p className="lead">진짜 이름 말고 별명을 지어 주세요. 이 설정서가 AI에게 보내는 글 맨 앞에 붙어요.</p>
+                            <label className="dl"><dt>작가 이름 (별명)</dt>
+                                <input className="wr-input" value={name} maxLength={12} onChange={(e) => setName(e.target.value)} placeholder="예: 달이" />
                             </label>
-                        ))}
-                        <div className="dl"><dt>모습 꾸미기</dt>
-                            <LookEditor look={look} level={1} persona={persona} onChange={setLook} mood={pmood} onMood={setPmood} />
-                        </div>
-                        <button className="linkbtn" style={{ marginTop: 24 }} disabled={name.trim().length < 1} onClick={() => createWriter(name.trim(), persona, look)}>이 작가로 시작하기</button>
-                        <p className="note">모자·안경 같은 꾸미기 부품은 레벨이 오르면 하나씩 열려요.</p>
+                            {fields.map(([k, label, ph]) => (
+                                <label key={k} className="dl"><dt>{label}</dt>
+                                    <input className="wr-input" value={persona[k]} maxLength={40} placeholder={ph} onChange={(e) => setPersona({ ...persona, [k]: e.target.value })} />
+                                </label>
+                            ))}
+                            <div className="dl"><dt>모습 꾸미기</dt>
+                                <LookEditor look={look} level={1} onChange={setLook} mood={pmood} onMood={setPmood} />
+                            </div>
+                            <button className="linkbtn" style={{ marginTop: 24 }} disabled={name.trim().length < 1} onClick={() => createWriter(name.trim(), persona, look)}>이 친구로 시작!</button>
+                            <p className="note">안경·망토 같은 꾸미기는 레벨이 오르면 하나씩 열려요.</p>
+                        </>)}
                     </aside>
                 </div>
             </div>
@@ -198,6 +241,7 @@ function Room() {
                                 <ellipse cx="400" cy="446" rx="190" ry="40" fill="#F2B6A3" />
 
                                 <g className={`obj${view === 'dex' ? ' on' : ''}`} aria-label={objs[0].aria} {...oc('dex')}>
+                                    <g className="lift">
                                     <rect x="34" y="106" width="200" height="268" fill="#B07A48" /><rect x="46" y="118" width="176" height="244" fill="#8E5F34" />
                                     {GENRES.map((g, i) => (
                                         <g key={g.id} opacity={doneGenres.has(g.id) ? 1 : 0.35}>
@@ -205,30 +249,37 @@ function Room() {
                                         </g>
                                     ))}
                                     <g stroke="#B07A48" strokeWidth="8"><line x1="46" y1="196" x2="222" y2="196" /><line x1="46" y1="276" x2="222" y2="276" /><line x1="46" y1="356" x2="222" y2="356" /></g>
-                                    <rect className="hit" x="30" y="100" width="208" height="278" rx="4" />
                                     <g className="tag"><rect x="64" y="384" width="140" height="30" /><text x="134" y="406">장르 도감</text></g>
+                                    </g>
+                                    <rect className="hit" x="30" y="100" width="208" height="318" rx="4" />
                                 </g>
 
                                 <g className={`obj${view === 'quest' ? ' on' : ''}`} aria-label={objs[1].aria} {...oc('quest')}>
+                                    <g className="lift">
                                     <rect x="562" y="62" width="206" height="170" fill="#A9743F" /><rect x="572" y="72" width="186" height="150" fill="#E0B27A" />
                                     <g transform="rotate(-4 610 120)"><rect x="586" y="88" width="72" height="64" fill="#fff" /><g stroke="#BDA98A" strokeWidth="3"><line x1="594" y1="104" x2="650" y2="104" /><line x1="594" y1="116" x2="642" y2="116" /><line x1="594" y1="128" x2="650" y2="128" /></g></g>
                                     <g transform="rotate(5 700 130)"><rect x="672" y="84" width="74" height="70" fill="var(--mustard)" /><text x="709" y="124" fontSize="20" fontWeight="700" textAnchor="middle" fill="var(--ink)" fontFamily="Gowun Dodum">퀘스트</text></g>
-                                    <rect className="hit" x="558" y="58" width="214" height="178" />
                                     <g className="tag"><rect x="598" y="242" width="134" height="30" /><text x="665" y="264">오늘의 퀘스트</text></g>
+                                    </g>
+                                    <rect className="hit" x="558" y="58" width="214" height="218" />
                                 </g>
 
                                 <g className={`obj${view === 'desk' ? ' on' : ''}`} aria-label={objs[2].aria} {...oc('desk')}>
+                                    <g className="lift">
                                     <rect x="548" y="338" width="228" height="20" fill="#B07A48" /><rect x="560" y="358" width="14" height="60" fill="#8E5F34" /><rect x="750" y="358" width="14" height="60" fill="#8E5F34" />
                                     <polygon points="590,336 662,322 662,338 590,342" fill="#fff" /><polygon points="662,322 734,336 734,342 662,338" fill="#FFF8E7" />
-                                    <rect className="hit" x="544" y="292" width="236" height="130" />
                                     <g className="tag"><rect x="594" y="424" width="132" height="30" /><text x="660" y="446">내 책 만들기</text></g>
+                                    </g>
+                                    <rect className="hit" x="544" y="292" width="236" height="166" />
                                 </g>
 
                                 <g transform="translate(320 214)">
                                     <g className={`obj${view === 'writer' ? ' on' : ''}`} aria-label={objs[3].aria} {...oc('writer')}>
-                                        <Character look={w.look} mood={mood} temper={temper} />
-                                        <rect className="hit" x="10" y="0" width="140" height="224" />
+                                        <g className="lift">
+                                        <g transform="translate(-20 0)"><Character look={w.look} mood={mood} temper={temper} /></g>
                                         <g className="tag"><rect x="10" y="238" width="140" height="30" /><text x="80" y="260">작가 설정서</text></g>
+                                        </g>
+                                        <rect className="hit" x="10" y="0" width="140" height="272" />
                                     </g>
                                 </g>
                             </svg>
@@ -273,7 +324,7 @@ function Room() {
 
 /* ───────── 퀘스트 ───────── */
 function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () => void }) {
-    const { writer, quests, activeQuestId, startQuest, setRawText, stamp, finishQuest, setActive } = useWriterStore()
+    const { writer, quests, activeQuestId, startQuest, setRawText, stamp, finishQuest, setActive, library } = useWriterStore()
     const w = writer!
     const active = quests.find((q) => q.id === activeQuestId && q.status !== 'done') ?? null
     const [genre, setGenre] = useState<GenreId>('fairytale')
@@ -291,7 +342,13 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
             <>
                 <p className="kicker">오늘의 퀘스트</p>
                 <h2>무엇을 쓸까요?</h2>
-                <p className="lead">장르를 고르고 이야기 씨앗을 적어요.</p>
+                <p className="lead">AI 친구와 글을 쓰는 4걸음이에요. 먼저 장르를 고르고 이야기 씨앗을 적어요.</p>
+                <ol className="flow" aria-label="글쓰기 4걸음">
+                    <li><span className="no">1</span><b>씨앗 적기</b><small>쓰고 싶은 이야기를 짧게</small></li>
+                    <li><span className="no">2</span><b>AI 주문서 복사</b><small>앱이 만든 주문서를 복사</small></li>
+                    <li><span className="no">3</span><b>AI 창에 붙이기</b><small>ChatGPT·Gemini에 붙여 넣기</small></li>
+                    <li><span className="no">4</span><b>결과 가져와 도장</b><small>글을 붙이고 채택·고침·폐기</small></li>
+                </ol>
                 <div className="seg" role="tablist">
                     {GENRES.filter((x) => x.unlockLevel <= w.level).map((x) => (
                         <button key={x.id} role="tab" aria-selected={genre === x.id} className={genre === x.id ? 'on' : ''} onClick={() => setGenre(x.id)}>{x.emoji} {x.title}</button>
@@ -303,7 +360,7 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
                 <label className="dl"><dt>이야기 씨앗 (진짜 이름·학교 없이, 지어낸 이야기로)</dt>
                     <textarea className="paste" value={seed} maxLength={MAX_SEED} onChange={(e) => setSeed(e.target.value)} placeholder="예: 비 오는 날 우산이 하나뿐인 두 친구(별이, 구름이)" />
                 </label>
-                <button className="linkbtn" disabled={seed.trim().length < 5} onClick={() => { startQuest(genre, buildPrompt(w.name, w.persona, genre, seed)); setSeed(''); setChecks([false, false, false]); setCopied(false); setPaste('') }}>지침 만들기</button>
+                <button className="linkbtn" disabled={seed.trim().length < 5} onClick={() => { startQuest(genre, buildPrompt(w.name, w.persona, genre, seed, library.length > 0)); setSeed(''); setChecks([false, false, false]); setCopied(false); setPaste('') }}>AI 주문서 만들기</button>
             </>
         )
     }
@@ -330,10 +387,10 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
             <h2>글 한 편 완성하기</h2>
             <p className="lead">{g.mission}</p>
             <ol className="steps">
-                <li className="step done"><span className="no">1</span><h3>이야기 씨앗</h3><p className="reasontxt">씨앗과 설정서로 지침을 만들었어요.</p></li>
+                <li className="step done"><span className="no">1</span><h3>이야기 씨앗</h3><p className="reasontxt">씨앗과 설정서로 AI 주문서를 만들었어요.</p></li>
 
                 <li className={`step${copied ? ' done' : ''}`}><span className="no">2</span>
-                    <h3>지침 복사하기</h3>
+                    <h3>AI 주문서 복사하기</h3>
                     <div className="promptbox" style={{ whiteSpace: 'pre-wrap' }}>{active.prompt}</div>
                     <p className="note" style={{ marginTop: 8 }}><b>{SAFETY_GUIDE.title}</b> — {SAFETY_GUIDE.intro}</p>
                     {SAFETY_GUIDE.checks.map((c, i) => (
@@ -346,13 +403,13 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
                                 <button className="linkbtn" disabled={!allChecked} onClick={() => window.confirm('정말 이대로 복사할까요?') && copy(active.prompt)}>그래도 복사</button></div>
                         </div>
                     )}
-                    {hits.length === 0 && <button className="linkbtn" disabled={!allChecked} onClick={() => copy(active.prompt)}>{allChecked ? '지침 복사하기' : '위 체크를 모두 해야 복사할 수 있어요'}</button>}
+                    {hits.length === 0 && <button className="linkbtn" disabled={!allChecked} onClick={() => copy(active.prompt)}>{allChecked ? 'AI 주문서 복사하기' : '위 체크를 모두 해야 복사할 수 있어요'}</button>}
                     <p className="note">{SAFETY_GUIDE.note}</p>
                 </li>
 
                 <li className={`step${active.stanzas.length ? ' done' : ''}${copied ? '' : ' lock'}`}><span className="no">3</span>
                     <h3>AI의 글 붙여넣기</h3>
-                    <p>Gemini나 ChatGPT에 지침을 넣고 나온 글을 여기에 붙여요.</p>
+                    <p>Gemini나 ChatGPT에 AI 주문서를 넣고 나온 글을 여기에 붙여요.</p>
                     {!active.stanzas.length ? (
                         <>
                             <textarea className="paste" value={paste} maxLength={MAX_RAW} onChange={(e) => setPaste(e.target.value)} disabled={!copied} aria-label="AI가 쓴 글" />
@@ -452,7 +509,61 @@ function DeskPanel({ toast }: { toast: (m: string) => void }) {
                         : <p className="note">책으로 저장하려면 <Link to="/login" style={{ textDecoration: 'underline' }}>로그인</Link>이 필요해요.</p>}
                 </>
             )}
+            <LibrarySection toast={toast} />
         </>
+    )
+}
+
+// 내 글 책장: 책상·이야기 교실에서 보내 온 글 + 내려받기
+function LibrarySection({ toast }: { toast: (m: string) => void }) {
+    const { writer, quests, library, removeFromLibrary } = useWriterStore()
+    const [problems, setProblems] = useState<{ title: string; found: string }[]>([])
+    if (!writer) return null
+    const sources = exportSources(library, quests)
+
+    const download = () => {
+        const bad = privacyProblems(sources, '')
+        setProblems(bad)
+        if (bad.length) return toast('개인정보가 든 글이 있어요. 먼저 고쳐 주세요')
+        downloadText(`${writer.name}-내글모음.txt`, buildExportText(writer, sources))
+        toast('내려받았어요! AI에 올려 보세요')
+    }
+
+    return (
+        <section className="lib" aria-label="내 글 책장">
+            <h3>내 글 책장</h3>
+            <p className="lead">작가의 책상이나 이야기 교실에서 &ldquo;AI 작가에게 보여주기&rdquo;를 누른 글이 여기 모여요. 글이 쌓일수록 AI가 내 말투를 더 잘 따라 해요.</p>
+            {!library.length ? (
+                <div className="locked">아직 책장이 비어 있어요. <Link to="/desk" style={{ textDecoration: 'underline' }}>작가의 책상</Link>이나 <Link to="/together" style={{ textDecoration: 'underline' }}>이야기 교실</Link>에서 글을 써 보세요.</div>
+            ) : (
+                <ul className="pages">
+                    {library.map((x) => (
+                        <li key={x.id}>
+                            <span className="n">{x.source === 'desk' ? '책상' : '교실'}</span>
+                            <span>{x.title} <small style={{ color: 'var(--ink-2)' }}>· {x.text.length}자</small></span>
+                            <button className="t" onClick={() => removeFromLibrary(x.id)} aria-label={`${x.title} 책장에서 빼기`}>빼기</button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {problems.length > 0 && (
+                <div className="locked" role="alert">
+                    {problems.map((p) => <p key={p.title} style={{ margin: '0 0 4px' }}>「{p.title}」에 개인정보({p.found})로 보이는 부분이 있어요. 글을 고쳐서 다시 보여주거나, 책장에서 빼 주세요.</p>)}
+                </div>
+            )}
+            {sources.length > 0 && (
+                <>
+                    <p className="note">특징 카드와 함께 글 {sources.length}편을 파일 하나로 내려받아요. 내려받기 전에 이름·학교·전화번호가 없는지 자동으로 살펴봐요.</p>
+                    <button className="linkbtn" onClick={download}>내 글 모음 내려받기</button>
+                    <ol className="howto">
+                        <li><b>ChatGPT:</b> 프로젝트를 만들고 &ldquo;파일 추가&rdquo;로 이 파일을 올려요.</li>
+                        <li><b>Gemini:</b> 노트북(NotebookLM)을 만들고 &ldquo;소스 추가&rdquo;로 이 파일을 올려요.</li>
+                        <li>그다음 오늘의 퀘스트에서 AI 주문서를 복사해 그 프로젝트·노트북 안에서 붙여넣어요.</li>
+                        <li>파일을 올릴 수 없다면 파일을 열어 글 몇 편을 주문서 아래에 붙여 넣어도 돼요.</li>
+                    </ol>
+                </>
+            )}
+        </section>
     )
 }
 
@@ -471,10 +582,13 @@ function SheetPanel({ toast, mood, onMood }: { toast: (m: string) => void; mood:
                 <dt>쓰지 않는 것</dt><dd>{w.persona.avoids || '-'}</dd>
             </dl>
             <div className="dl"><dt>모습 꾸미기</dt>
-                <LookEditor look={normalizeLook(w.look)} level={w.level} persona={w.persona} onChange={updateLook} mood={mood} onMood={onMood} />
+                <LookEditor look={normalizeLook(w.look)} level={w.level} onChange={updateLook} mood={mood} onMood={onMood} />
             </div>
             <p className="note">이 기기의 브라우저에 저장돼요. 다른 기기에서는 보이지 않아요.</p>
-            <button className="linkbtn" onClick={() => { if (window.confirm('작가와 기록을 모두 지우고 새로 시작할까요?')) { reset(); toast('새로 시작해요') } }}>처음부터 다시 시작</button>
+            <div className="resetrow">
+                <button className="linkbtn" onClick={() => { if (window.confirm(`정말 ${w.name} 작가를 지우고 처음부터 다시 만들까요?\n\n레벨, 경험치, 써 온 글 기록이 모두 사라지고 되돌릴 수 없어요.\n(이미 플립북으로 보낸 책은 그대로 남아요)`)) { reset(); toast('새로 시작해요') } }}>처음부터 다시 만들기</button>
+                <span>작가를 새로 고르고 싶을 때 눌러요</span>
+            </div>
         </>
     )
 }

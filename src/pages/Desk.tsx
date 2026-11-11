@@ -3,6 +3,8 @@ import '../styles/desk.css'
 import Footer from '../components/together/Footer'
 import DeskShelf from './DeskShelf'
 import { findSpellHints } from '../lib/spell'
+import { Link } from 'react-router-dom'
+import { useWriterStore } from '../store/writerStore'
 import '../lib/classlog'
 import {
   deskCreateAuthor, deskLogin, deskSave, deskGet,loadDeskSession, saveDeskSession, clearDeskSession,
@@ -39,6 +41,13 @@ export default function Desk() {
   const [piece, setPiece] = useState<DeskPieceInput>(() => loadDeskDraft() ?? blank())
   const [savedAt, setSavedAt] = useState<string>('')
   const [busy, setBusy] = useState(false)
+  const addToLibrary = useWriterStore(st => st.addToLibrary)
+  const [shown, setShown] = useState('')
+  // 지금 쓰는 글을 AI 작가 책장에 복사한다 (이 기기 안에만 저장, 서버 요청 없음)
+  const showWriter = () => {
+    const r = addToLibrary({ source: 'desk', ref: piece.id ?? `new:${piece.title.trim()}`, title: piece.title.trim() || '(제목 없음)', text: piece.body })
+    setShown(r === 'full' ? 'AI 작가 책장이 가득 찼어요. AI 작가 방에서 오래된 글을 지워 주세요.' : r === 'updated' ? '책장의 글을 새 내용으로 바꿨어요.' : 'AI 작가에게 보여줬어요! 경험치도 받았어요.')
+  }
   const [err, setErr] = useState('')
 
   // 쓰다 만 글은 이 기기에 임시로 남겨 둔다
@@ -187,10 +196,12 @@ export default function Desk() {
                 </div>
                 {err && <p className="err" role="alert" style={{ color: 'var(--red)' }}>{err}</p>}
                 {keyBad && relogin}
+                {shown && <p role="status">{shown} <Link to="/writer">AI 작가 방으로 가기 →</Link></p>}
                 <div className="ft">
                   <span>{piece.body.length}자 · 실명·학교·연락처는 쓰지 않아요 {savedAt && <b className="saved">· {savedAt}</b>}</span>
                   <span className="acts">
                     <button className="btn sub" type="button" disabled={busy} onClick={() => void doSave('draft')}>{busy ? '저장 중…' : '임시 저장'}</button>
+                    <button className="btn sub" type="button" disabled={piece.body.trim().length < 30} title="30글자 이상 써야 해요" onClick={showWriter}>AI 작가에게 보여주기</button>
                     <a role="button" tabIndex={0} onClick={() => setTab('review')}>다 썼어요, 퇴고하러 →</a>
                   </span>
                 </div>

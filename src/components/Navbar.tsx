@@ -61,6 +61,15 @@ export default function Navbar() {
                     >
                         작가의 책상
                     </Link>
+                    <Link
+                        to="/writer"
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${isActive('/writer')
+                                ? 'bg-white text-brand-purple shadow-sm'
+                                : 'text-gray-500 hover:text-brand-purple'
+                            }`}
+                    >
+                        AI 작가
+                    </Link>
                     {user && (
                         <Link
                             to="/dashboard"
@@ -167,6 +176,14 @@ export default function Navbar() {
                             }`}
                     >
                         작가의 책상
+                    </Link>
+                    <Link
+                        to="/writer"
+                        onClick={closeMenu}
+                        className={`block px-4 py-3 rounded-xl text-base font-semibold transition ${isActive('/writer') ? 'bg-gray-100 text-brand-purple' : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        AI 작가
                     </Link>
                     {user && (
                         <Link

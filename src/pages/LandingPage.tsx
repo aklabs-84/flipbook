@@ -264,6 +264,8 @@ export default function LandingPage() {
               <h2>오늘, 첫 줄을 써 볼까요?</h2>
               <p>선생님은 클래스로그AI에서 들어오면 학생 글을 바로 제출받을 수 있어요.</p>
               <Link className="lnk" to="/desk">작가의 책상 열기 <b>→</b></Link>
+              <p style={{ marginTop: 24 }}>나만의 AI 작가를 키우고 싶다면?</p>
+              <Link className="lnk" to="/writer">AI 작가 만나러 가기 <b>→</b></Link>
             </section>
             <footer className="aklabs-foot">
               <b>AKLABS</b>

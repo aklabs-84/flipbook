@@ -1,250 +1,110 @@
 import { memo } from 'react'
 import type { Look, Mood, Temper } from '../../types/writer'
-import { BODY_PARTS, HAIR_COLOR_PARTS, SKIN_PARTS, SKIN_SHADE, normalizeLook } from '../../data/charParts'
+import { TOOL_NAME, normalizeLook } from '../../data/charParts'
 
 export type { Mood }
+
+// 모든 작가 친구는 가로 200 × 세로 230 칸 안에 그려진다
+export const CHAR_VIEWBOX = '0 0 200 230'
 
 const INK = '#4A3228'
 const TOMATO = '#E8553E'
 const MUSTARD = '#F7C844'
+const PINK = '#F59C8B'
 
-// 얼굴형: 윤곽선과 귀 위치. 눈(y84)·코(y95)·입(y106) 자리는 모든 얼굴형이 같다
-const FACES: Record<string, { d: string; ear: number }> = {
-    round: { d: 'M40 80Q40 38 80 38Q120 38 120 80Q120 118 80 118Q40 118 40 80Z', ear: 40 },
-    oval: { d: 'M44 76Q44 36 80 36Q116 36 116 76Q116 124 80 126Q44 124 44 76Z', ear: 44 },
-    square: { d: 'M41 70Q41 38 80 38Q119 38 119 70L117 94Q114 120 80 120Q46 120 43 94Z', ear: 41 },
-    heart: { d: 'M40 68Q40 38 80 38Q120 38 120 68Q119 92 98 110Q88 120 80 120Q72 120 62 110Q41 92 40 68Z', ear: 40 },
-}
-
-const BROW_D: Record<string, string> = {
-    normal: 'M-8 1Q0 -3 8 0',
-    thick: 'M-8 1Q0 -3 8 0',
-    sad: 'M-8 2Q0 0 8 -4',
-    up: 'M-8 -3Q0 -2 8 2',
-}
-
-const OPEN_EYES = ['dot', 'big', 'narrow']
-
-function Eye({ kind, side, female }: { kind: string; side: -1 | 1; female: boolean }) {
-    const lash = female && OPEN_EYES.includes(kind) && <path d={`M${6.5 * side} -3.5l${3 * side} -2.6`} stroke={INK} strokeWidth="2.2" strokeLinecap="round" />
-    return (
-        <g transform={`translate(${80 + side * 16} 84)`}>
-            {kind === 'dot' && (<><ellipse rx="4.4" ry="5.4" fill={INK} /><circle cx="1.6" cy="-2" r="1.5" fill="#fff" /></>)}
-            {kind === 'big' && (
-                <>
-                    <ellipse rx="6.2" ry="7.6" fill={INK} />
-                    <ellipse cy="1.2" rx="3.4" ry="4.4" fill="#8A5A3C" opacity=".7" />
-                    <circle cx="2" cy="-3" r="2.2" fill="#fff" /><circle cx="-2" cy="2.6" r="1.1" fill="#fff" />
-                    <path d="M-7.2 -5.2Q0 -10.5 7.2 -5.2" stroke={INK} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-                </>
-            )}
-            {kind === 'narrow' && (<><ellipse rx="5.8" ry="3" fill={INK} /><circle cx="1.6" cy="-.8" r="1.1" fill="#fff" /></>)}
-            {kind === 'smile' && <path d="M-6.5 2.5Q0 -6 6.5 2.5" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" />}
-            {kind === 'sleepy' && (<><path d="M-6.5 -1Q0 5.5 6.5 -1" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" /><path d={`M${6.5 * side} -1l${2.6 * side} -2`} stroke={INK} strokeWidth="2" strokeLinecap="round" /></>)}
-            {kind === 'wide' && (<><circle r="8.2" fill="#fff" stroke={INK} strokeWidth="2" /><circle r="3.2" fill={INK} /><circle cx="1.2" cy="-1.2" r="1.1" fill="#fff" /></>)}
-            {lash}
-        </g>
-    )
-}
-
-function eyeKind(base: string, mood: Mood): string {
-    if (mood === 'happy') return 'smile'
-    if (mood === 'surprise') return 'wide'
-    if (mood !== 'idle' && !OPEN_EYES.includes(base)) return 'dot'
-    return base
-}
-
-function Mouth({ base, mood }: { base: string; mood: Mood }) {
-    if (mood === 'happy') return <path d="M68 103Q80 120 92 103Z" fill={TOMATO} stroke={INK} strokeWidth="2.6" strokeLinejoin="round" />
-    if (mood === 'fire') return (<><path d="M66 102Q80 124 94 102Z" fill={TOMATO} stroke={INK} strokeWidth="2.6" strokeLinejoin="round" /><path d="M70 105H90" stroke="#fff" strokeWidth="3" /></>)
-    if (mood === 'surprise') return <ellipse cx="80" cy="108" rx="4.6" ry="6.2" fill="#7A2E22" stroke={INK} strokeWidth="2.4" />
-    if (mood === 'worry') return <path d="M71 111Q80 102 89 111" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" />
-    if (mood === 'think') return <path d="M72 108Q80 104 90 107" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" />
-    if (base === 'grin') return <path d="M68 103Q80 120 92 103Z" fill={TOMATO} stroke={INK} strokeWidth="2.6" strokeLinejoin="round" />
-    if (base === 'small') return <path d="M75 105Q80 109.5 85 105" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" />
-    if (base === 'flat') return <path d="M73 106.5H87" stroke={INK} strokeWidth="3.2" strokeLinecap="round" />
-    return <path d="M70 104Q80 113 90 104" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" />
-}
-
-function Nose({ kind, shade }: { kind: string; shade: string }) {
-    if (kind === 'round') return <path d="M76 94Q80 99.5 84 94" stroke={shade} strokeWidth="2.4" fill="none" strokeLinecap="round" />
-    if (kind === 'point') return <path d="M80.5 88L77 97Q80 99.5 83.5 97" stroke={shade} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    return <circle cx="80" cy="95" r="1.7" fill={shade} />
-}
-
-function HairBack({ kind, c }: { kind: string; c: string }) {
-    switch (kind) {
-        case 'bob': return <path d="M33 84Q28 32 80 30Q132 32 127 84L127 114Q121 122 112 116L112 84L48 84L48 116Q39 122 33 114Z" fill={c} />
-        case 'long': return <path d="M31 84Q26 30 80 28Q134 30 129 84L136 156Q122 166 112 152L112 94L48 94L48 152Q38 166 24 156Z" fill={c} />
-        case 'braid': return (
-            <g fill={c}>
-                <path d="M33 84Q28 32 80 30Q132 32 127 84L127 112Q121 120 112 114L112 84L48 84L48 112Q42 118 33 112Z" />
-                <ellipse cx="40" cy="124" rx="7.5" ry="9" /><ellipse cx="38" cy="141" rx="7" ry="9" /><ellipse cx="36" cy="158" rx="6.5" ry="9" /><ellipse cx="34" cy="174" rx="6" ry="8" />
-                <circle cx="34" cy="184" r="5" fill={TOMATO} />
-            </g>
-        )
-        case 'curly': return (
-            <g fill={c}>
-                <circle cx="40" cy="62" r="14" /><circle cx="52" cy="42" r="14" /><circle cx="80" cy="34" r="15" /><circle cx="108" cy="42" r="14" /><circle cx="120" cy="62" r="14" />
-                <circle cx="34" cy="86" r="12" /><circle cx="126" cy="86" r="12" />
-            </g>
-        )
-        case 'twin': return (
-            <g fill={c}>
-                <path d="M36 84Q34 34 80 32Q126 34 124 84Z" />
-                <ellipse cx="29" cy="106" rx="11" ry="22" transform="rotate(8 29 106)" /><ellipse cx="131" cy="106" rx="11" ry="22" transform="rotate(-8 131 106)" />
-                <circle cx="33" cy="84" r="4.5" fill={TOMATO} /><circle cx="127" cy="84" r="4.5" fill={TOMATO} />
-            </g>
-        )
-        case 'bun': return <g fill={c}><circle cx="80" cy="25" r="15" /><path d="M36 84Q34 34 80 32Q126 34 124 84Z" /></g>
-        default: return null
+/* ───────── 사람 친구 (동글이) ───────── */
+function personSvg(look: Look, mood: Mood): string {
+    const sk = look.skin, hc = look.hairColor, bd = look.body, m = mood
+    const has = (d: string) => look.deco.includes(d)
+    const eyeL = [76, 98], eyeR = [124, 98]
+    let s = `<ellipse class="ch-shadow" cx="100" cy="222" rx="52" ry="7" fill="rgba(74,50,40,.18)"/><g class="ch-bob">`
+    if (has('cape')) s += `<path d="M60 150Q100 138 140 150L156 214Q100 226 44 214Z" fill="#C94430" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`
+    if (has('pet')) s += `<g transform="translate(166 196)"><ellipse rx="17" ry="14" fill="#3a2a24"/><path d="M12 -8Q26 -22 30 -8Q22 -10 14 -2Z" fill="#3a2a24"/><circle cx="-5" cy="-3" r="3.6" fill="#fff"/><circle cx="6" cy="-3" r="3.6" fill="#fff"/><circle cx="-4.4" cy="-2.6" r="1.6" fill="#3a2a24"/><circle cx="6.6" cy="-2.6" r="1.6" fill="#3a2a24"/></g>`
+    s += `<ellipse cx="82" cy="216" rx="14" ry="8" fill="#6b4a3a"/><ellipse cx="118" cy="216" rx="14" ry="8" fill="#6b4a3a"/>`
+    s += `<path d="M70 207Q62 152 100 146Q138 152 130 207Q100 216 70 207Z" fill="${bd}" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`
+    s += `<path d="M88 148Q100 160 112 148" fill="#FFFDF6" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`
+    const up = m === 'fire' || m === 'happy'
+    s += `<g stroke="${INK}" stroke-width="2.5"><ellipse cx="64" cy="${up ? 160 : 174}" rx="9" ry="14" transform="rotate(${up ? 35 : 18} 64 ${up ? 160 : 174})" fill="${bd}"/><ellipse cx="136" cy="${up ? 160 : 174}" rx="9" ry="14" transform="rotate(${up ? -35 : -18} 136 ${up ? 160 : 174})" fill="${bd}"/></g>`
+    s += `<circle cx="${up ? 52 : 58}" cy="${up ? 146 : 188}" r="8" fill="${sk}" stroke="${INK}" stroke-width="2.5"/><circle cx="${up ? 148 : 142}" cy="${up ? 146 : 188}" r="8" fill="${sk}" stroke="${INK}" stroke-width="2.5"/>`
+    // 뒷머리
+    if (look.base === 'bob') s += `<path d="M34 98Q30 36 100 34Q170 36 166 98L168 140Q152 146 148 122L52 122Q48 146 32 140Z" fill="${hc}" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`
+    if (look.base === 'buns') s += `<circle cx="44" cy="48" r="21" fill="${hc}" stroke="${INK}" stroke-width="2.5"/><circle cx="156" cy="48" r="21" fill="${hc}" stroke="${INK}" stroke-width="2.5"/>`
+    s += `<circle cx="37" cy="102" r="10" fill="${sk}" stroke="${INK}" stroke-width="2.5"/><circle cx="163" cy="102" r="10" fill="${sk}" stroke="${INK}" stroke-width="2.5"/>`
+    s += `<ellipse cx="100" cy="96" rx="64" ry="56" fill="${sk}" stroke="${INK}" stroke-width="2.5"/>`
+    // 앞머리
+    s += `<path d="M37 92Q36 38 100 38Q164 38 163 92Q152 64 122 68Q100 54 78 68Q48 64 37 92Z" fill="${hc}" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`
+    if (look.base === 'tuft') s += `<path d="M94 40Q86 14 108 12Q102 26 114 38Z" fill="${hc}" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`
+    // 볼
+    s += `<ellipse cx="62" cy="114" rx="11" ry="6.5" fill="${PINK}" opacity=".65"/><ellipse cx="138" cy="114" rx="11" ry="6.5" fill="${PINK}" opacity=".65"/>`
+    // 얼굴
+    const eye = (c: number[]) => `<g transform="translate(${c[0]} ${c[1]})"><ellipse rx="8" ry="10.5" fill="${INK}"/><circle cx="2.8" cy="-3.6" r="3.2" fill="#fff"/><circle cx="-2.6" cy="3" r="1.6" fill="#fff"/></g>`
+    if (m === 'idle') s += eye(eyeL) + eye(eyeR) + `<path d="M92 120Q100 127 108 120" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    if (m === 'happy') {
+        for (const c of [eyeL, eyeR]) s += `<path d="M${c[0] - 10} ${c[1] + 3}Q${c[0]} ${c[1] - 10} ${c[0] + 10} ${c[1] + 3}" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`
+        s += `<path d="M88 114Q100 134 112 114Z" fill="#B53A2A" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/><path d="M93 123Q100 129 107 123" fill="${PINK}"/>`
     }
-}
-
-function HairFront({ kind, c, shade }: { kind: string; c: string; shade: string }) {
-    if (kind === 'bald') return <ellipse cx="66" cy="50" rx="10" ry="4" fill="#fff" opacity=".28" transform="rotate(-18 66 50)" />
-    const fringe = ['bob', 'long', 'braid', 'twin'].includes(kind)
-    return (
-        <g>
-            {/* 앞머리 밑에 드리우는 그림자 */}
-            <path d="M44 74Q80 90 116 74Q116 64 80 64Q44 64 44 74Z" fill={shade} opacity=".32" />
-            {fringe
-                ? <path d="M37 84Q32 32 80 30Q128 32 123 84Q121 58 102 52Q92 66 78 60Q62 68 56 54Q40 60 37 84Z" fill={c} />
-                : <path d="M37 82Q32 32 80 30Q128 32 123 82Q118 60 102 52Q84 62 60 54Q44 60 37 82Z" fill={c} />}
-            {kind === 'curly' && <g fill={c}><circle cx="56" cy="52" r="12" /><circle cx="80" cy="46" r="12" /><circle cx="104" cy="52" r="12" /></g>}
-            <path d="M52 47Q68 37 88 40" stroke="#fff" strokeOpacity=".24" strokeWidth="4" fill="none" strokeLinecap="round" />
-        </g>
-    )
-}
-
-function HeadItem({ kind }: { kind: string }) {
-    switch (kind) {
-        case 'cap': return (<><path d="M40 56Q42 22 82 22Q120 22 120 56Z" fill={TOMATO} /><path d="M40 54H130Q134 59 127 61H40Z" fill="#C23F2B" /><circle cx="81" cy="22" r="3.4" fill="#C23F2B" /></>)
-        case 'beret': return (<><ellipse cx="84" cy="36" rx="40" ry="13" fill="#66A844" transform="rotate(-8 84 36)" /><circle cx="104" cy="24" r="4.5" fill="#4F8A32" /></>)
-        case 'crown': return <path d="M52 40l6-22 14 14 8-18 8 18 14-14 6 22z" fill={MUSTARD} stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
-        case 'ribbon': return (<g transform="translate(56 42)"><path d="M0 0L-17 -9V9Z" fill={TOMATO} /><path d="M0 0L17 -9V9Z" fill={TOMATO} /><circle r="4.6" fill="#C23F2B" /></g>)
-        case 'flower': return (
-            <g transform="translate(54 50)">
-                {[0, 72, 144, 216, 288].map((a) => <circle key={a} cx={Math.cos((a * Math.PI) / 180) * 6.2} cy={Math.sin((a * Math.PI) / 180) * 6.2} r="5" fill="#F2A08F" />)}
-                <circle r="3.6" fill={MUSTARD} />
-            </g>
-        )
-        case 'phones': return (
-            <g>
-                <path d="M38 84Q36 22 80 22Q124 22 122 84" fill="none" stroke={INK} strokeWidth="6" strokeLinecap="round" />
-                <ellipse cx="38" cy="88" rx="8" ry="12.5" fill={TOMATO} stroke={INK} strokeWidth="2.4" /><ellipse cx="122" cy="88" rx="8" ry="12.5" fill={TOMATO} stroke={INK} strokeWidth="2.4" />
-            </g>
-        )
-        default: return null
+    if (m === 'think') s += eye(eyeL) + eye(eyeR) + `<path d="M110 80Q124 72 140 80" stroke="${INK}" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M92 122L108 119" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><circle cx="160" cy="40" r="4" fill="${INK}" opacity=".55"/><circle cx="172" cy="28" r="6" fill="${INK}" opacity=".55"/><circle cx="188" cy="14" r="8" fill="${INK}" opacity=".55"/>`
+    if (m === 'surprise') {
+        for (const c of [eyeL, eyeR]) s += `<circle cx="${c[0]}" cy="${c[1]}" r="12" fill="#fff" stroke="${INK}" stroke-width="2.5"/><circle cx="${c[0]}" cy="${c[1]}" r="4.6" fill="${INK}"/>`
+        s += `<ellipse cx="100" cy="124" rx="7" ry="9" fill="#B53A2A" stroke="${INK}" stroke-width="2.5"/><path d="M60 62l-8-10M140 62l8-10M100 36v-12" stroke="${MUSTARD}" stroke-width="4" stroke-linecap="round"/>`
     }
+    if (m === 'worry') s += eye(eyeL) + eye(eyeR) + `<path d="M64 80L86 86M136 80L114 86" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/><path d="M90 124Q95 117 100 124Q105 131 110 124" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M152 70Q162 86 152 92Q142 86 152 70Z" fill="#8FD0EE" stroke="${INK}" stroke-width="2"/>`
+    if (m === 'fire') s += eye(eyeL) + eye(eyeR) + `<path d="M62 84L90 92M138 84L110 92" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><path d="M86 114Q100 136 114 114Z" fill="#B53A2A" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 70Q10 56 22 40Q24 54 34 56Q32 64 24 70ZM176 70Q190 56 178 40Q176 54 166 56Q168 64 176 70Z" fill="${TOMATO}" stroke="${INK}" stroke-width="2"/>`
+    // 여자 친구는 눈꼬리에 속눈썹 한 가닥
+    if (look.gender === 'f') for (const c of [eyeL, eyeR]) s += `<path d="M${c[0] + (c[0] < 100 ? -8 : 8)} ${c[1] - 5}l${c[0] < 100 ? -6 : 6} -6" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`
+    if (has('bow')) s += `<g transform="translate(142 54) rotate(18)" fill="${TOMATO}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"><path d="M0 0L-20 -12V12Z"/><path d="M0 0L20 -12V12Z"/><circle r="5.5"/></g>`
+    if (has('glasses')) s += `<g fill="rgba(255,255,255,.28)" stroke="${INK}" stroke-width="3"><circle cx="76" cy="98" r="17"/><circle cx="124" cy="98" r="17"/><path d="M93 98H107" fill="none"/></g>`
+    if (has('hat')) s += `<g transform="rotate(-8 100 46)"><ellipse cx="100" cy="44" rx="52" ry="17" fill="#7A4E8C" stroke="${INK}" stroke-width="2.5"/><circle cx="104" cy="26" r="5.5" fill="#7A4E8C" stroke="${INK}" stroke-width="2.5"/></g>`
+    if (has('crown')) {
+        s += `<path d="M70 44L74 18L90 34L100 12L110 34L126 18L130 44Z" fill="${MUSTARD}" stroke="${INK}" stroke-width="2.8" stroke-linejoin="round"/><circle cx="100" cy="30" r="4" fill="${TOMATO}" stroke="${INK}" stroke-width="1.6"/>`
+        s += `<g class="ch-spark" fill="${MUSTARD}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"><path d="M22 120l4 10 10 4-10 4-4 10-4-10-10-4 10-4Z"/><path d="M178 112l3 7 7 3-7 3-3 7-3-7-7-3 7-3Z"/></g>`
+    }
+    return s + '</g>'
 }
 
-function Sparkle({ x, y, s = 1, d = 0 }: { x: number; y: number; s?: number; d?: number }) {
-    return <path className="ch-spark" style={{ animationDelay: `${d}s` }} transform={`translate(${x} ${y}) scale(${s})`} d="M0 -8L2.2 -2.2L8 0L2.2 2.2L0 8L-2.2 2.2L-8 0L-2.2 -2.2Z" fill={MUSTARD} stroke={INK} strokeWidth="1.2" strokeLinejoin="round" />
+/* ───────── 도구 친구 (연필·책·잉크병) ───────── */
+type ToolBase = { f: number[]; top: number[]; body: (c: string) => string }
+const TOOLS: Record<string, ToolBase> = {
+    pencil: { f: [100, 120], top: [100, 20], body: (c) => `<path d="M64 74L100 20L136 74Z" fill="#F2C79A" stroke="${INK}" stroke-width="4"/><path d="M89 38L100 20L111 38Z" fill="${INK}"/><rect x="64" y="74" width="72" height="104" fill="${c}" stroke="${INK}" stroke-width="4"/><rect x="64" y="178" width="72" height="14" fill="#C9CED6" stroke="${INK}" stroke-width="4"/><rect x="64" y="192" width="72" height="22" rx="10" fill="${PINK}" stroke="${INK}" stroke-width="4"/>` },
+    book: { f: [108, 114], top: [100, 36], body: (c) => `<rect x="40" y="38" width="124" height="152" rx="12" fill="${c}" stroke="${INK}" stroke-width="4"/><rect x="40" y="38" width="20" height="152" rx="10" fill="rgba(74,50,40,.22)" stroke="${INK}" stroke-width="4"/><rect x="50" y="186" width="114" height="12" rx="5" fill="#FFFDF6" stroke="${INK}" stroke-width="4"/><path d="M130 38V70L137 63L144 70V38Z" fill="${MUSTARD}" stroke="${INK}" stroke-width="3.4" stroke-linejoin="round"/>` },
+    ink: { f: [100, 150], top: [100, 34], body: (c) => `<rect x="82" y="52" width="36" height="26" fill="#EAF4F9" stroke="${INK}" stroke-width="4"/><rect x="76" y="34" width="48" height="20" rx="5" fill="#C98F5A" stroke="${INK}" stroke-width="4"/><path d="M118 40Q152 4 178 14Q164 44 124 46Z" fill="#fff" stroke="${INK}" stroke-width="3.4" stroke-linejoin="round"/><path d="M48 106Q48 74 80 74H120Q152 74 152 106V182Q152 210 124 210H76Q48 210 48 182Z" fill="#EAF4F9" stroke="${INK}" stroke-width="4"/><path d="M54 118Q54 112 62 112H138Q146 112 146 118V184Q146 204 124 204H76Q54 204 54 184Z" fill="${c}"/>` },
+}
+
+function toolFace(fx: number, fy: number, m: Mood, deco: string[]): string {
+    const eye = (x: number, px: number, py: number, r = 11, pr = 5.5) => `<circle cx="${x}" cy="0" r="${r}" fill="#fff" stroke="${INK}" stroke-width="3.2"/><circle cx="${x + px}" cy="${py}" r="${pr}" fill="${INK}"/><circle cx="${x + px + 2}" cy="${py - 2}" r="1.8" fill="#fff"/>`
+    let s = `<g transform="translate(${fx} ${fy})" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="-30" cy="14" rx="8" ry="5" fill="${PINK}" opacity=".75"/><ellipse cx="30" cy="14" rx="8" ry="5" fill="${PINK}" opacity=".75"/>`
+    if (m === 'idle') s += eye(-16, 0, 1) + eye(16, 0, 1) + `<path d="M-8 22Q0 30 8 22" stroke="${INK}" stroke-width="3.5" fill="none"/>`
+    if (m === 'happy') s += `<path d="M-27 4Q-16 -12 -5 4M5 4Q16 -12 27 4" stroke="${INK}" stroke-width="4.5" fill="none"/><path d="M-13 18Q0 40 13 18Z" fill="#B53A2A" stroke="${INK}" stroke-width="3"/>`
+    if (m === 'think') s += eye(-16, 3, -4) + eye(16, 3, -4) + `<path d="M6 -22Q18 -30 30 -22" stroke="${INK}" stroke-width="4" fill="none"/><path d="M-10 26Q-4 20 2 26T14 24" stroke="${INK}" stroke-width="3.5" fill="none"/><text x="38" y="-26" font-family="Black Han Sans, sans-serif" font-size="26" fill="${INK}">?</text>`
+    if (m === 'surprise') s += eye(-16, 0, 0, 13, 3.4) + eye(16, 0, 0, 13, 3.4) + `<ellipse cx="0" cy="28" rx="7" ry="10" fill="#B53A2A" stroke="${INK}" stroke-width="3"/><path d="M-46 -20l-9 -6M46 -20l9 -6M0 -30v-12" stroke="${INK}" stroke-width="4"/>`
+    if (m === 'worry') s += eye(-16, 0, 4) + eye(16, 0, 4) + `<path d="M-30 -18L-8 -13M30 -18L8 -13" stroke="${INK}" stroke-width="4" fill="none"/><path d="M-10 26Q-5 19 0 26Q5 33 10 26" stroke="${INK}" stroke-width="3.5" fill="none"/><path d="M40 -22Q50 -6 40 0Q30 -6 40 -22Z" fill="#8FD0EE" stroke="${INK}" stroke-width="2.4"/>`
+    if (m === 'fire') s += eye(-16, 0, 1, 11, 6) + eye(16, 0, 1, 11, 6) + `<path d="M-30 -16L-6 -8M30 -16L6 -8" stroke="${INK}" stroke-width="5" fill="none"/><path d="M-13 18Q0 40 13 18Z" fill="#B53A2A" stroke="${INK}" stroke-width="3"/><path d="M-52 -4Q-62 -18 -52 -30Q-50 -20 -42 -18Q-44 -10 -52 -4ZM52 -4Q62 -18 52 -30Q50 -20 42 -18Q44 -10 52 -4Z" fill="${MUSTARD}" stroke="${INK}" stroke-width="2.4"/>`
+    if (deco.includes('glasses')) s += `<g fill="rgba(255,255,255,.2)" stroke="${INK}" stroke-width="3.4"><circle cx="-16" cy="0" r="17"/><circle cx="16" cy="0" r="17"/></g>`
+    if (deco.includes('star')) s += `<path d="M-38 24l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1Z" fill="${MUSTARD}" stroke="${INK}" stroke-width="2.4" transform="scale(.9)"/>`
+    return s + '</g>'
+}
+
+function toolSvg(look: Look, mood: Mood): string {
+    const b = TOOLS[look.base] ?? TOOLS.pencil
+    let s = `<ellipse class="ch-shadow" cx="100" cy="222" rx="52" ry="7" fill="rgba(74,50,40,.18)"/><g class="ch-bob">` + b.body(look.body) + toolFace(b.f[0], b.f[1], mood, look.deco)
+    const [tx, ty] = b.top
+    if (look.deco.includes('crown')) s += `<path d="M${tx - 26} ${ty + 6}L${tx - 22} ${ty - 20}L${tx - 9} ${ty - 5}L${tx} ${ty - 26}L${tx + 9} ${ty - 5}L${tx + 22} ${ty - 20}L${tx + 26} ${ty + 6}Z" fill="${MUSTARD}" stroke="${INK}" stroke-width="3.6" stroke-linejoin="round"/><circle cx="${tx}" cy="${ty - 8}" r="4" fill="${TOMATO}" stroke="${INK}" stroke-width="2"/>`
+    if (look.deco.includes('bow')) s += `<g transform="translate(${b.f[0] + 34} ${b.f[1] - 44})" fill="${TOMATO}" stroke="${INK}" stroke-width="3.2" stroke-linejoin="round"><path d="M0 0L-22 -13V13Z"/><path d="M0 0L22 -13V13Z"/><circle r="6"/></g>`
+    return s + '</g>'
+}
+
+export function characterName(look: Look): string {
+    const l = normalizeLook(look)
+    return l.kind === 'tool' ? `${TOOL_NAME[l.base] ?? '글쓰기'} 친구` : '동글이 작가'
 }
 
 interface Props { look: Look; mood?: Mood; temper?: Temper }
 
+// 부모가 <svg viewBox={CHAR_VIEWBOX}> 안에 넣어 쓴다. 그림 문자열은 우리가 만들고, 색은 normalizeLook이 #RRGGBB만 통과시킨다
 function CharacterBase({ look: rawLook, mood = 'idle', temper = 'normal' }: Props) {
     const look = normalizeLook(rawLook)
-    const female = look.gender === 'f'
-    const skin = SKIN_PARTS.find((p) => p.id === look.skin)?.color ?? '#FFE0C2'
-    const shade = SKIN_SHADE[look.skin] ?? '#E9B995'
-    const hair = HAIR_COLOR_PARTS.find((p) => p.id === look.hairColor)?.color ?? '#3A2A24'
-    const shirt = BODY_PARTS.find((p) => p.id === look.body)?.color ?? '#F7C844'
-    const face = FACES[look.face] ?? FACES.round
-    const ek = eyeKind(look.eyes, mood)
-    const eyeShift = mood === 'think' ? 'translate(2 -3)' : mood === 'worry' ? 'translate(0 2)' : mood === 'fire' ? 'translate(80 84) scale(1.12) translate(-80 -84)' : undefined
-    const brow = BROW_D[look.brows] ?? BROW_D.normal
-    const browW = look.brows === 'thick' ? 4.8 : 3
-
-    return (
-        <g className={`ch m-${mood} t-${temper}`}>
-            <ellipse className="ch-shadow" cx="80" cy="222" rx="46" ry="7.5" fill="rgba(74,50,40,.18)" />
-            <g className="ch-bob">
-                {look.accessory === 'cape' && <path d="M46 126Q80 116 114 126L134 200Q80 212 26 200Z" fill={TOMATO} />}
-
-                {/* 다리·신발 */}
-                <rect x="60" y="192" width="14" height="22" rx="5" fill={skin} /><rect x="86" y="192" width="14" height="22" rx="5" fill={skin} />
-                <ellipse cx="66" cy="215" rx="11" ry="5.5" fill={INK} /><ellipse cx="94" cy="215" rx="11" ry="5.5" fill={INK} />
-
-                {/* 왼팔 */}
-                <g className="ch-arm-l">
-                    <line x1="48" y1="134" x2="36" y2="176" stroke={shirt} strokeWidth="13" strokeLinecap="round" />
-                    <circle cx="35" cy="181" r="7.5" fill={skin} />
-                </g>
-
-                {/* 몸통 */}
-                {female ? (
-                    <>
-                        <path d="M48 126Q80 117 112 126L116 160Q134 192 140 202Q80 212 20 202Q26 192 44 160Z" fill={shirt} />
-                        <path d="M80 118Q116 128 116 160Q134 192 140 202Q124 206 108 206Q104 150 80 118Z" fill="#000" opacity=".07" />
-                        <path d="M68 124Q80 134 92 124" stroke="#fff" strokeOpacity=".7" strokeWidth="3" fill="none" strokeLinecap="round" />
-                        <path d="M50 158Q80 166 110 158" stroke={INK} strokeOpacity=".18" strokeWidth="3" fill="none" />
-                    </>
-                ) : (
-                    <>
-                        <path d="M42 128Q80 117 118 128L120 188Q80 194 40 188Z" fill={shirt} />
-                        <path d="M80 118Q116 130 118 128L120 188Q100 191 90 192Q96 150 80 118Z" fill="#000" opacity=".07" />
-                        <path d="M68 124L80 137L92 124" stroke="#fff" strokeOpacity=".7" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M42 186H118L123 205H88L80 195L72 205H37Z" fill="#4A5A78" />
-                    </>
-                )}
-
-                {/* 목 */}
-                <rect x="71" y="106" width="18" height="24" rx="7" fill={shade} />
-
-                {/* 목 장신구 */}
-                {look.accessory === 'scarf' && (<><path d="M54 120Q80 136 106 120L111 133Q80 151 49 133Z" fill={TOMATO} /><path d="M97 134l11 30-13 3z" fill="#C23F2B" /></>)}
-                {look.accessory === 'bowtie' && (<g transform="translate(80 127)"><path d="M0 0L-15 -8V8Z" fill={TOMATO} /><path d="M0 0L15 -8V8Z" fill={TOMATO} /><circle r="4" fill="#C23F2B" /></g>)}
-                {look.accessory === 'necklace' && (<><path d="M62 123Q80 144 98 123" stroke={MUSTARD} strokeWidth="2.6" fill="none" /><circle cx="80" cy="138" r="4.6" fill={MUSTARD} stroke={INK} strokeWidth="1.6" /></>)}
-
-                {/* 오른팔 + 손에 든 것 */}
-                <g className="ch-arm-r">
-                    <line x1="112" y1="134" x2="138" y2="116" stroke={shirt} strokeWidth="13" strokeLinecap="round" />
-                    {look.hold === 'pen' && (<><line x1="142" y1="112" x2="154" y2="84" stroke={INK} strokeWidth="4.5" strokeLinecap="round" /><line x1="153" y1="88" x2="155" y2="82" stroke={TOMATO} strokeWidth="5" strokeLinecap="round" /></>)}
-                    {look.hold === 'notebook' && (<g transform="rotate(-12 144 104)"><rect x="132" y="88" width="26" height="30" rx="3" fill="#FFF8E7" stroke={INK} strokeWidth="2.4" /><path d="M138 98h14M138 105h14M138 112h9" stroke="#BDA98A" strokeWidth="2" strokeLinecap="round" /></g>)}
-                    {look.hold === 'wand' && (<><line x1="142" y1="112" x2="154" y2="86" stroke={INK} strokeWidth="4" strokeLinecap="round" /><path transform="translate(155 80)" d="M0 -9L2.6 -2.6L9 0L2.6 2.6L0 9L-2.6 2.6L-9 0L-2.6 -2.6Z" fill={MUSTARD} stroke={INK} strokeWidth="1.6" strokeLinejoin="round" /></>)}
-                    <circle cx="141" cy="113" r="7.5" fill={skin} />
-                </g>
-
-                {/* 머리 */}
-                <g className="ch-head">
-                    <HairBack kind={look.hair} c={hair} />
-                    <circle cx={face.ear + 1} cy="88" r="7.5" fill={skin} /><circle cx={160 - face.ear - 1} cy="88" r="7.5" fill={skin} />
-                    <circle cx={face.ear + 1} cy="88" r="3.6" fill={shade} opacity=".55" /><circle cx={160 - face.ear - 1} cy="88" r="3.6" fill={shade} opacity=".55" />
-                    <path d={face.d} fill={skin} />
-                    <path d="M58 114Q80 124 102 114" stroke={shade} strokeOpacity=".4" strokeWidth="5" fill="none" strokeLinecap="round" />
-                    <HairFront kind={look.hair} c={hair} shade={shade} />
-
-                    {/* 표정: 눈썹·눈·코·입 */}
-                    <g className="ch-brow ch-brow-l"><g transform="translate(64 70)"><path d={brow} stroke={INK} strokeOpacity=".9" strokeWidth={browW} fill="none" strokeLinecap="round" /></g></g>
-                    <g className="ch-brow ch-brow-r"><g transform="translate(96 70) scale(-1 1)"><path d={brow} stroke={INK} strokeOpacity=".9" strokeWidth={browW} fill="none" strokeLinecap="round" /></g></g>
-                    <g transform={eyeShift} className={OPEN_EYES.includes(ek) ? 'ch-eyes' : undefined}>
-                        <Eye kind={ek} side={-1} female={female} /><Eye kind={ek} side={1} female={female} />
-                    </g>
-                    <Nose kind={look.nose} shade={shade} />
-                    <Mouth base={look.mouth} mood={mood} />
-                    <circle cx="52" cy="99" r="6.5" fill={TOMATO} opacity={mood === 'worry' ? 0.12 : 0.26} /><circle cx="108" cy="99" r="6.5" fill={TOMATO} opacity={mood === 'worry' ? 0.12 : 0.26} />
-
-                    {/* 얼굴 장신구 */}
-                    {look.accessory === 'freckle' && <g fill={shade}><circle cx="50" cy="93" r="1.2" /><circle cx="55" cy="96.5" r="1.2" /><circle cx="60" cy="93" r="1.2" /><circle cx="100" cy="93" r="1.2" /><circle cx="105" cy="96.5" r="1.2" /><circle cx="110" cy="93" r="1.2" /></g>}
-                    {look.accessory === 'glasses' && (<g fill="#fff" fillOpacity=".14" stroke={INK} strokeWidth="3"><rect x="52" y="73" width="24" height="20" rx="7" /><rect x="84" y="73" width="24" height="20" rx="7" /><line x1="76" y1="83" x2="84" y2="83" /></g>)}
-                    {look.accessory === 'round' && (<g fill="#fff" fillOpacity=".14" stroke="#C99A2E" strokeWidth="2.6"><circle cx="64" cy="84" r="12" /><circle cx="96" cy="84" r="12" /><line x1="76" y1="83" x2="84" y2="83" /></g>)}
-                    {look.accessory === 'earring' && (<g fill={MUSTARD} stroke={INK} strokeWidth="1.4"><circle cx={face.ear + 1} cy="99" r="3.4" /><circle cx={160 - face.ear - 1} cy="99" r="3.4" /></g>)}
-
-                    <HeadItem kind={look.hat} />
-                </g>
-
-                {/* 마음 효과 */}
-                {mood === 'think' && (<g className="ch-fx" transform="translate(114 16)"><path d="M0 8Q0 0 8 0Q16 0 16 8Q16 14 8 17V22" stroke={INK} strokeWidth="3.4" fill="none" strokeLinecap="round" /><circle cx="8" cy="30" r="2.2" fill={INK} /></g>)}
-                {mood === 'surprise' && (<g className="ch-fx" transform="translate(120 12)"><rect x="0" y="0" width="6" height="20" rx="3" fill={TOMATO} /><circle cx="3" cy="28" r="3.4" fill={TOMATO} /></g>)}
-                {mood === 'worry' && <path className="ch-drop" d="M120 58Q126 68 120 74Q114 68 120 58Z" fill="#9FD3F0" stroke="#5BA7D6" strokeWidth="1.6" strokeLinejoin="round" />}
-                {mood === 'fire' && (<><Sparkle x={22} y={40} s={1.1} /><Sparkle x={140} y={44} s={0.9} d={0.35} /><Sparkle x={126} y={14} s={0.7} d={0.7} /><Sparkle x={34} y={12} s={0.6} d={0.5} /></>)}
-                {mood === 'happy' && (<><Sparkle x={24} y={50} s={0.7} /><Sparkle x={138} y={46} s={0.6} d={0.4} /></>)}
-            </g>
-        </g>
-    )
+    const html = look.kind === 'tool' ? toolSvg(look, mood) : personSvg(look, mood)
+    return <g className={`ch m-${mood} t-${temper}`} dangerouslySetInnerHTML={{ __html: html }} />
 }
 
 export default memo(CharacterBase)

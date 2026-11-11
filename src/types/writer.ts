@@ -9,21 +9,17 @@ export interface Persona {
     avoids: string
 }
 
-// body = 옷 색깔. 나머지는 캐릭터 부품 id (src/data/charParts.ts)
+// 작가 친구의 모습. kind: 사람 친구('person') / 도구 친구('tool')
+// base: 사람은 머리 모양(bob·buns·tuft·short), 도구는 연필·책·잉크병(pencil·book·ink)
+// skin·body·hairColor는 색(#RRGGBB), deco는 껴 놓은 꾸미기 id 목록 (src/data/charParts.ts)
 export interface Look {
+    kind: 'person' | 'tool'
     gender: 'm' | 'f'
-    skin: string
-    face: string
-    eyes: string
-    brows: string
-    nose: string
-    mouth: string
-    hair: string
+    base: string
     hairColor: string
+    skin: string
     body: string
-    hat: string
-    accessory: string
-    hold: string
+    deco: string[]
 }
 
 export type Mood = 'idle' | 'happy' | 'think' | 'surprise' | 'worry' | 'fire'
@@ -68,3 +64,14 @@ export interface QuestRecord {
 }
 
 export const EMPTY_STATS: Stats = { imagination: 0, expression: 0, judgment: 0, persistence: 0 }
+
+// 내 글 책장: 책상·이야기 교실에서 가져온 글. 이 기기(localStorage)에만 있다
+export interface LibraryItem {
+    id: string
+    source: 'desk' | 'together'
+    // 같은 글을 두 번 넣지 않기 위한 표 (책상 글 id / 방 번호)
+    ref: string
+    title: string
+    text: string
+    addedAt: string
+}
