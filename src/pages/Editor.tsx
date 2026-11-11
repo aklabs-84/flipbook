@@ -924,7 +924,7 @@ export default function Editor() {
                 </div>
 
                 <div className="p-6 border-t border-gray-100">
-                    <p className="text-[10px] text-center text-gray-300 font-medium">Flipbook Pro - Book Engine v2.0</p>
+                    <p className="text-[10px] text-center text-gray-300 font-medium">플립북 - Book Engine v2.0</p>
                 </div>
             </aside>
 

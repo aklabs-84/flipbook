@@ -1,11 +1,11 @@
-# 📖 Flipbook Pro (플립북 프로)
+# 📖 플립북 (Flipbook)
 
 **당신의 상상력을 현실로 만드는 AI 기반 플립북 제작 플랫폼**
 
-Flipbook Pro는 정적인 PDF 문서나 단순한 이미지를 실제 책을 넘기는 듯한 경험을 주는 '인터랙티브 플립북'으로 변환해주는 웹 애플리케이션입니다.
+플립북은 정적인 PDF 문서나 단순한 이미지를 실제 책을 넘기는 듯한 경험을 주는 '인터랙티브 플립북'으로 변환해주는 웹 애플리케이션입니다.
 Google/Kakao 로그인을 지원하며, 사용자는 자신만의 디지털 책을 만들고, 공유하고, 전시할 수 있습니다.
 
-![Flipbook Pro Hero](/public/assets/book_festival_hero.png)
+![플립북 Hero](/public/assets/book_festival_hero.png)
 
 ## ✨ 주요 기능 (Key Features)
 

@@ -20,7 +20,7 @@ export default function Navbar() {
                         alt="AK Labs Logo"
                         className="h-8 w-auto transition-transform group-hover:scale-105"
                     />
-                    <span className="font-bold text-lg text-gray-800 tracking-tight">Flipbook Pro</span>
+                    <span className="font-bold text-lg text-gray-800 tracking-tight">플립북</span>
                 </Link>
 
                 {/* Desktop Menu */}

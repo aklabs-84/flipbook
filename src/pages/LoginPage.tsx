@@ -16,7 +16,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
             <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
                 <h2 className="text-3xl font-bold mb-2 text-brand-purple">환영합니다!</h2>
-                <p className="text-gray-500 mb-8">Flipbook Pro를 시작하려면 로그인해주세요.</p>
+                <p className="text-gray-500 mb-8">플립북을 시작하려면 로그인해주세요.</p>
 
                 <div className="space-y-4">
                     <button

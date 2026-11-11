@@ -272,7 +272,7 @@ export default function Book({ onUpdateLayers, onPageClick, command, isLocked, o
 
                                 <div className="mt-auto opacity-40">
                                     <p className="text-xs text-gray-400 font-serif italic">Created with</p>
-                                    <p className="text-sm font-bold text-gray-600 tracking-wider mt-1">FLIPBOOK PRO</p>
+                                    <p className="text-sm font-bold text-gray-600 tracking-wider mt-1">FLIPBOOK</p>
                                 </div>
                             </>
                         )}
