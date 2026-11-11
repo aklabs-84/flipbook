@@ -41,8 +41,16 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
   }
 
   async function refresh() {
-    const r = await run(() => teacherOverview(tc))
-    if (r) { setRooms(r); setAuthed(true); setInfo(`방 ${r.length}개를 새로 확인했어요.`) }
+    const r = await run(async () => ({
+      rooms: await teacherOverview(tc),
+      // 열려 있는 방이 있으면 그 방의 글·학생 자리도 같이 새로 가져온다
+      open: openCode ? { ls: await teacherRoom(tc, openCode), ms: await teacherMembers(tc, openCode) } : null,
+    }))
+    if (r) {
+      setRooms(r.rooms); setAuthed(true)
+      if (r.open) { setLines(r.open.ls); setMems(r.open.ms); setTurnName(old => { const n = { ...old }; delete n[openCode]; return n }) }
+      setInfo(`방 ${r.rooms.length}개를 새로 확인했어요.`)
+    }
   }
 
   // 선생님으로 등록된 계정이면 코드 없이 바로 열기
