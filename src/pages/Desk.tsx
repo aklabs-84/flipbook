@@ -7,9 +7,9 @@ import { Link } from 'react-router-dom'
 import { useWriterStore } from '../store/writerStore'
 import '../lib/classlog'
 import {
-  deskCreateAuthor, deskLogin, deskSave, deskGet,loadDeskSession, saveDeskSession, clearDeskSession,
+  deskCreateAuthor, deskLogin, deskSave, deskGet, deskList, loadDeskSession, saveDeskSession, clearDeskSession,
   loadDeskDraft, saveDeskDraft, DESK_COLORS, DESK_GENRES,
-  type DeskSession, type DeskPieceInput,
+  type DeskSession, type DeskPieceInput, type DeskPieceItem,
 } from '../lib/desk'
 
 type Tab = 'write' | 'review' | 'shelf'
@@ -30,6 +30,9 @@ const blank = (): DeskPieceInput => ({
 export const sentences = (text: string): string[] =>
   (text.match(/[^.?!\n]+[.?!”"’']*/g) ?? []).map(s => s.trim()).filter(Boolean)
 
+// 저장된 글과 지금 글이 같은지 비교하는 지문 (바뀐 부분이 있는지 알려 주는 용도)
+const sigOf = (p: DeskPieceInput) => JSON.stringify([p.title.trim(), p.genre, p.memo, p.body, p.fav])
+
 const today = () => {
   const d = new Date()
   return `${d.getMonth() + 1}월 ${d.getDate()}일`
@@ -49,9 +52,17 @@ export default function Desk() {
     setShown(r === 'full' ? 'AI 작가 책장이 가득 찼어요. AI 작가 방에서 오래된 글을 지워 주세요.' : r === 'updated' ? '책장의 글을 새 내용으로 바꿨어요.' : 'AI 작가에게 보여줬어요! 경험치도 받았어요.')
   }
   const [err, setErr] = useState('')
+  // 마지막으로 서버에 저장하거나 불러온 모습. 지금 글과 다르면 "저장 안 됨"
+  const [savedSig, setSavedSig] = useState('')
+  const [pickOpen, setPickOpen] = useState(false)
+  const [pickItems, setPickItems] = useState<DeskPieceItem[] | null>(null)
+  const [pickErr, setPickErr] = useState('')
 
   // 쓰다 만 글은 이 기기에 임시로 남겨 둔다
   useEffect(() => { saveDeskDraft(piece) }, [piece])
+
+  const hasContent = !!(piece.title.trim() || piece.body.trim())
+  const unsaved = hasContent && sigOf(piece) !== savedSig
 
   const mat = useMemo(() => parseMat(piece.memo), [piece.memo])
   const [spellOn, setSpellOn] = useState(() => { try { return localStorage.getItem('desk.spell') !== 'off' } catch { return true } })
@@ -78,11 +89,15 @@ export default function Desk() {
   )
 
   const doSave = async (status: 'draft' | 'done') => {
-    if (!piece.title.trim()) { setErr('제목을 먼저 지어 주세요'); return false }
+    // 임시 저장은 제목이 없어도 되게 '제목 없음'으로 저장한다 (발행은 제목 필요)
+    if (!piece.title.trim() && status === 'done') { setErr('제목을 먼저 지어 주세요'); return false }
+    if (!piece.title.trim() && !piece.body.trim()) { setErr('제목이나 본문을 조금 써 주세요'); return false }
+    const next: DeskPieceInput = { ...piece, title: piece.title.trim() || '제목 없음', status }
     setBusy(true); setErr('')
     try {
-      const r = await deskSave(session.key, { ...piece, status })
-      setPiece(p => ({ ...p, id: r.id, status }))
+      const r = await deskSave(session.key, next)
+      setPiece(p => ({ ...p, id: r.id, status, title: next.title }))
+      setSavedSig(sigOf({ ...next, id: r.id }))
       setSavedAt('방금 저장했어요')
       return true
     } catch (e) {
@@ -102,16 +117,29 @@ export default function Desk() {
 
   const publish = async () => {
     if (!piece.body.trim()) { setErr('본문을 먼저 써 주세요'); return }
-    if (await doSave('done')) { saveDeskDraft(null); setPiece(blank()); setTab('shelf') }
+    if (await doSave('done')) { saveDeskDraft(null); setPiece(blank()); setSavedSig(''); setTab('shelf') }
   }
 
   // 서재에서 "고치기/이어 쓰기": 서버에서 글을 가져와 쓰는 화면으로
   const editPiece = async (id: string) => {
+    // 쓰던 글이 저장 안 된 채로 다른 글을 열면 사라지니, 먼저 저장할지 물어본다
+    if (unsaved && id !== piece.id) {
+      if (!window.confirm('지금 쓰던 글이 아직 저장되지 않았어요.\n저장하고 다른 글을 열까요?\n\n(취소하면 그대로 있어요)')) return
+      if (!(await doSave('draft'))) return
+    }
     try {
       const g = await deskGet(session.key, id)
       setPiece({ id: g.id, title: g.title, genre: g.genre, memo: g.memo || JSON.stringify(EMPTY_MAT), body: g.body, fav: g.fav, color: g.color, status: g.status })
-      setSavedAt(''); setErr(''); setTab('write')
+      setSavedSig(sigOf({ id: g.id, title: g.title, genre: g.genre, memo: g.memo || JSON.stringify(EMPTY_MAT), body: g.body, fav: g.fav, color: g.color, status: g.status }))
+      setSavedAt(''); setErr(''); setTab('write'); setPickOpen(false)
     } catch (e) { setErr(e instanceof Error ? e.message : '글을 불러오지 못했어요') }
+  }
+
+  const openPicker = async () => {
+    if (pickOpen) { setPickOpen(false); return }
+    setPickOpen(true); setPickErr('')
+    try { setPickItems(await deskList(session.key)) }
+    catch (e) { setPickErr(e instanceof Error ? e.message : '목록을 불러오지 못했어요') }
   }
 
   const steps = [
@@ -163,6 +191,24 @@ export default function Desk() {
                     onChange={e => setMat('mood', e.target.value)} /></details>
               </aside>
               <article className="ms">
+                <div className="pick">
+                  <button className="btn sub" type="button" onClick={() => void openPicker()} aria-expanded={pickOpen}>
+                    {pickOpen ? '목록 닫기' : '이전에 쓴 글 불러오기'}
+                  </button>
+                  {pickOpen && (
+                    <div className="pk-list">
+                      {pickErr && <p role="alert" style={{ color: 'var(--red)' }}>{pickErr}</p>}
+                      {!pickErr && pickItems === null && <p>불러오는 중…</p>}
+                      {pickItems && pickItems.length === 0 && <p>아직 저장한 글이 없어요. '임시 저장'을 누르면 여기에 나타나요.</p>}
+                      {pickItems && pickItems.map(it => (
+                        <button key={it.id} type="button" className="pk-row" onClick={() => void editPiece(it.id)}>
+                          <b>{it.title}</b>
+                          <span>{it.genre} · {it.len}자 · {it.status === 'done' ? '발행함' : '쓰는 중'} · {new Date(it.updated_at).getMonth() + 1}월 {new Date(it.updated_at).getDate()}일</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="meta">
                   <div className="genre">
                     {DESK_GENRES.map(g => (
@@ -198,7 +244,7 @@ export default function Desk() {
                 {keyBad && relogin}
                 {shown && <p role="status">{shown} <Link to="/writer">AI 작가 방으로 가기 →</Link></p>}
                 <div className="ft">
-                  <span>{piece.body.length}자 · 실명·학교·연락처는 쓰지 않아요 {savedAt && <b className="saved">· {savedAt}</b>}</span>
+                  <span>{piece.body.length}자 · 실명·학교·연락처는 쓰지 않아요 {unsaved ? <b className="unsaved">· 아직 저장 안 됨 (이 기기에만 있어요)</b> : (savedAt || savedSig) && <b className="saved">· {savedAt || '저장돼 있어요'}</b>}</span>
                   <span className="acts">
                     <button className="btn sub" type="button" disabled={busy} onClick={() => void doSave('draft')}>{busy ? '저장 중…' : '임시 저장'}</button>
                     <button className="btn sub" type="button" disabled={piece.body.trim().length < 30} title="30글자 이상 써야 해요" onClick={showWriter}>AI 작가에게 보여주기</button>

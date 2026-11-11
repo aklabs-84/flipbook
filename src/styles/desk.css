@@ -241,3 +241,13 @@
 .dk .ask .box small{display:block;margin:-10px 0 22px;color:var(--mute);font-size:16px;line-height:1.7}
 .dk .ask .box a.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 22px;background:var(--ink);color:var(--paper);font:700 17px/1 inherit;text-decoration:none}
 @media(max-width:480px){.dk .ask .box div{flex-direction:column}.dk .ask .box .btn{width:100%}}
+
+/* 이전 글 불러오기 · 저장 안내 */
+.dk .pick{margin-bottom:14px}
+.dk .pk-list{margin-top:10px;border:1px solid var(--line);max-height:260px;overflow-y:auto}
+.dk .pk-list p{margin:0;padding:14px;color:var(--mute);font-size:15px}
+.dk .pk-row{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:12px 14px;min-height:48px;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;font:inherit;color:var(--ink)}
+.dk .pk-row:last-child{border-bottom:0}
+.dk .pk-row:hover{background:rgba(0,0,0,.04)}
+.dk .pk-row span{font-size:14px;color:var(--mute)}
+.dk .unsaved{color:var(--red)}

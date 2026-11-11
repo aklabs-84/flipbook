@@ -202,3 +202,6 @@
 .tg .detgrid .mem .nm{font-weight:600;word-break:keep-all}
 .tg .detgrid .mem .act{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .tg .detgrid .mem .act .btn{white-space:nowrap}
+
+.tg .write .waitbig{display:block;font-size:22px;line-height:1.4}
+.tg .write .waitsub{font-size:16px;line-height:1.6;margin-top:6px}

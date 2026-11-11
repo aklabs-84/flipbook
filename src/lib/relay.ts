@@ -88,6 +88,8 @@ export const teacherSetBook = (tc: string, code: string, book: string | null) =>
 export interface TeacherMember { seq: number; nickname: string; released: boolean; leader?: boolean }
 export const teacherMembers = (tc: string, code: string) =>
   call<TeacherMember[]>('wr_teacher_members', { p_teacher_code: tc, p_code: code })
+export const teacherSetTurn = (tc: string, code: string, seq: number | null) =>
+  call<{ ok: boolean; turn: number }>('wr_set_turn', { p_teacher_code: tc, p_code: code, p_seq: seq })
 export const teacherRelease = (tc: string, code: string, seq: number) =>
   call<{ ok: boolean }>('wr_release_seat', { p_teacher_code: tc, p_code: code, p_seq: seq })
 

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import {
-  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetBook, teacherSetSent, teacherGetSent, amTeacher, teacherSetLeader, teacherBgm, teacherBgmSynced,
+  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetTurn, teacherSetBook, teacherSetSent, teacherGetSent, amTeacher, teacherSetLeader, teacherBgm, teacherBgmSynced,
   type TeacherMember, TeacherRoomSummary, type TeacherLine, type RelayMode,
 } from '../../lib/relay'
 import { uploadMedia } from '../../services/storageService'
@@ -31,6 +31,7 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
   const [openCode, setOpenCode] = useState('')
   const [lines, setLines] = useState<TeacherLine[]>([])
   const [mems, setMems] = useState<TeacherMember[]>([])
+  const [turnName, setTurnName] = useState<Record<string, string>>({})
 
   async function run<T>(f: () => Promise<T>): Promise<T | undefined> {
     setBusy(true); setErr('')
@@ -83,6 +84,15 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
         setInfo(`"${m.nickname}" 자리를 비웠어요. 같은 별명으로 다시 들어오라고 알려 주세요.`)
       }
     })
+  }
+
+  async function setTurn(code: string, m: TeacherMember | null) {
+    const r = await run(() => teacherSetTurn(tc, code, m ? m.seq : null))
+    if (r) {
+      const who = m?.nickname ?? mems.find(x => x.seq === r.turn)?.nickname ?? '다음 친구'
+      setTurnName(old => ({ ...old, [code]: who }))
+      setInfo(`지금 차례를 "${who}" 친구로 넘겼어요. 학생들은 [새 글 확인]을 누르면 바뀐 차례가 보여요.`)
+    }
   }
 
   async function setLeader(code: string, m: TeacherMember) {
@@ -271,11 +281,18 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
                           {mems.length > 0 && (
                             <div className="card" style={{ margin: 0 }}>
                               <b>👥 학생 자리</b>
+                              {r.status === 'open' && (
+                                <div style={{ margin: '6px 0 2px', fontSize: 15, lineHeight: 1.6 }}>
+                                  지금 차례: <b>{turnName[r.code] ?? r.turn ?? '-'}</b>
+                                  <div><button className="btn sm" type="button" disabled={busy} onClick={() => void setTurn(r.code, null)}>⏭ 다음 친구로 넘기기</button></div>
+                                </div>
+                              )}
                               <div style={{ marginTop: 6 }}>
                                 {mems.map(m => (
                                   <div key={m.seq} className="mem">
                                     <span className="nm">{m.leader ? '👑 ' : ''}{m.nickname}</span>
                                     <div className="act">
+                                      {r.status === 'open' && <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void setTurn(r.code, m)}>이 친구 차례로</button>}
                                       <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void setLeader(r.code, m)}>{m.leader ? '대표 해제' : '대표로 정하기'}</button>
                                       {m.released
                                         ? <em style={{ fontSize: 14 }}>(다시 들어오기 기다림)</em>

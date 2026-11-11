@@ -295,8 +295,9 @@ export default function ChatRoom({ session, onLeave }: Props) {
               <b>이 방은 선생님이 마무리했어요. 이야기를 끝까지 읽어 봐요 📖</b>
             ) : !myTurn ? (
               <>
-                <b>{turnName ? `지금은 ${turnName} 차례예요.` : '친구들이 모이는 중이에요.'}</b>
-                <div className="sub" style={{ margin: '4px 0 0' }}>[새 글 확인]을 눌러 이야기가 이어졌는지 봐요.</div>
+                <b className="waitbig">{turnName ? `⏳ 지금은 ${turnName} 차례예요` : '친구들이 모이는 중이에요'}</b>
+                <div className="waitsub">{turnName ? '내 차례가 올 때까지 잠깐 기다려요. 쓰기 칸은 내 차례에 열려요.' : '친구가 들어오면 시작해요.'}</div>
+                <div className="waitsub">👉 위의 초록색 <b>[새 글 확인]</b> 버튼을 눌러 내 차례가 왔는지 봐요.</div>
                 {notice && <div className="notice">{notice}</div>}
               </>
             ) : (
