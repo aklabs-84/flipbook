@@ -14,7 +14,7 @@ interface Props {
 }
 
 // 고칠 수 있는 것은 4가지뿐: 기분 보기 · 피부색(사람만) · 옷/몸 색 · 꾸미기
-export default function LookEditor({ look, level, onChange, mood, onMood }: Props) {
+export default function LookEditor({ look, level, onChange, onMood }: Props) {
     const isTool = look.kind === 'tool'
     const decos = DECOS.filter((d) => d.kinds.includes(look.kind))
     const toggle = (id: string) => {
@@ -25,11 +25,12 @@ export default function LookEditor({ look, level, onChange, mood, onMood }: Prop
     return (
         <div className="look">
             {onMood && (
-                <div className="moods" role="group" aria-label="기분 미리보기">
-                    <span>기분 보기</span>
+                <div className="moods" role="group" aria-label="평소 표정 고르기">
+                    <span>평소 표정</span>
                     {MOODS.map((m) => (
-                        <button key={m} type="button" className={mood === m ? 'on' : ''} onClick={() => onMood(m)}>{MOOD_LABEL[m]}</button>
+                        <button key={m} type="button" className={(look.rest ?? 'idle') === m ? 'on' : ''} onClick={() => { onChange({ ...look, rest: m === 'idle' ? undefined : m }); onMood(m) }}>{MOOD_LABEL[m]}</button>
                     ))}
+                    <small style={{ flexBasis: '100%', color: 'var(--ink-3, #7a6a5a)' }}>고른 표정이 방에서 쉬고 있을 때의 얼굴이에요. 도장을 찍으면 잠깐 바뀌었다가 돌아와요.</small>
                 </div>
             )}
 

@@ -49,7 +49,7 @@ function CreateWriter() {
         ['avoids', '쓰지 않는 것', '예: 어려운 한자어'],
     ]
     const list = kind === 'tool' ? SAMPLES.tool : SAMPLES[gender]
-    const pickSample = (l: Look) => { setLook(l); setPmood('happy'); setStep('detail') }
+    const pickSample = (l: Look) => { setLook(l); setPmood('idle'); setStep('detail') }
     const back = () => setStep(step === 'detail' ? 'sample' : step === 'sample' ? (kind === 'person' ? 'gender' : 'kind') : 'kind')
     const stepNo = { kind: 1, gender: 2, sample: 3, detail: 4 }[step]
 
@@ -199,7 +199,7 @@ function Room() {
     }, [full])
 
     const shown: Mood | null = (view === 'writer' ? preview : null) ?? flash
-    const baseMood: Mood = active?.status === 'stamping' ? 'think' : view === 'desk' ? 'happy' : 'idle'
+    const baseMood: Mood = active?.status === 'stamping' ? 'think' : view === 'desk' ? 'happy' : (normalizeLook(w.look).rest ?? 'idle')
     const mood: Mood = shown ?? baseMood
     const need = xpForNext(w.level)
     const doneGenres = useMemo(() => new Set(quests.filter((q) => q.status === 'done').map((q) => q.genre)), [quests])

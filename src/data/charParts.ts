@@ -92,6 +92,7 @@ export function normalizeLook(raw: unknown): Look {
         skin: inList(SKINS, l.skin) ? l.skin : SKINS[1].color,
         body: inList(COLORS, l.body) ? l.body : COLORS[1].color,
         deco: Array.from(new Set(deco)),
+        rest: (['happy', 'think', 'surprise', 'worry', 'fire'] as const).find((m) => m === l.rest),
     }
 }
 

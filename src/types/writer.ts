@@ -20,6 +20,8 @@ export interface Look {
     skin: string
     body: string
     deco: string[]
+    // 쉬고 있을 때의 평소 표정 (없으면 기본 표정)
+    rest?: Mood
 }
 
 export type Mood = 'idle' | 'happy' | 'think' | 'surprise' | 'worry' | 'fire'
