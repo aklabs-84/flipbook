@@ -11,6 +11,8 @@ import { GENRES, getGenre } from '../data/genres'
 import { SAFETY_GUIDE } from '../data/safetyGuide'
 import { checkPrivacy, maskHits } from '../lib/privacyCheck'
 import { buildPrompt, MAX_RAW, MAX_SEED, MIN_REASON, STAMP_LABEL, STAMP_XP, xpForNext } from '../lib/writerPrompt'
+import { deskGet, deskList, loadDeskSession, type DeskPieceItem } from '../lib/desk'
+import { loadHistory, relayCheck, type SavedSession } from '../lib/relay'
 import { sendToBook } from '../lib/writerBook'
 import { buildExportText, downloadText, exportSources, privacyProblems } from '../lib/writerLibrary'
 import { joinClass, leaveClass, loadMembership, sendReport, useClassSync, type ClassMembership } from '../lib/writerClass'
@@ -324,6 +326,63 @@ function Room() {
     )
 }
 
+/* ───────── 내 글에서 씨앗 가져오기 (작가의 책상·이야기 교실) ───────── */
+function SeedImport({ onPick }: { onPick: (text: string) => void }) {
+    const [open, setOpen] = useState(false)
+    const [busy, setBusy] = useState(false)
+    const [msg, setMsg] = useState('')
+    const [pieces, setPieces] = useState<DeskPieceItem[] | null>(null)
+    const deskKey = loadDeskSession()?.key
+    const rooms: SavedSession[] = open ? loadHistory() : []
+
+    async function toggle() {
+        const next = !open
+        setOpen(next); setMsg('')
+        if (next && deskKey && pieces === null) {
+            setBusy(true)
+            try { setPieces(await deskList(deskKey)) } catch { setPieces([]); setMsg('책상 글을 못 불러왔어요. 잠시 후 다시 해 보세요.') } finally { setBusy(false) }
+        }
+    }
+    async function fromDesk(it: DeskPieceItem) {
+        if (!deskKey) return
+        setBusy(true); setMsg('')
+        try { const d = await deskGet(deskKey, it.id); onPick(`${d.title}\n${d.body}`.trim()); setOpen(false) } catch { setMsg('글을 못 가져왔어요.') } finally { setBusy(false) }
+    }
+    async function fromRoom(r: SavedSession) {
+        setBusy(true); setMsg('')
+        try {
+            const st = await relayCheck(r.code, r.token, 0, 0)
+            const text = (st.lines ?? []).filter((l) => !l.sys).map((l) => l.t).join(' ')
+            if (!text) setMsg('이 방에는 아직 쓴 글이 없어요.')
+            else { onPick(text); setOpen(false) }
+        } catch { setMsg('방 이야기를 못 가져왔어요. 방이 닫혔을 수 있어요.') } finally { setBusy(false) }
+    }
+
+    return (
+        <div style={{ margin: '10px 0' }}>
+            <button className="linkbtn" type="button" onClick={() => void toggle()}>{open ? '목록 닫기' : '📥 내 글에서 가져오기'}</button>
+            {open && (
+                <div style={{ marginTop: 8, border: '2px solid var(--ink-2)', padding: 12, background: '#fff', fontSize: 16, lineHeight: 1.6 }}>
+                    <p style={{ margin: '0 0 8px', color: 'var(--ink-2)' }}>가져온 글은 씨앗 칸에서 고칠 수 있어요. 진짜 이름·학교가 있으면 지워 주세요. 씨앗은 {MAX_SEED}자까지예요.</p>
+                    <b>📖 작가의 책상</b>
+                    {!deskKey && <p style={{ margin: '4px 0' }}>이 기기에서 책상에 들어간 적이 없어요. 작가의 책상에서 열쇠로 먼저 들어가 주세요.</p>}
+                    {deskKey && pieces && pieces.length === 0 && <p style={{ margin: '4px 0' }}>저장한 글이 아직 없어요.</p>}
+                    {deskKey && pieces?.map((it) => (
+                        <div key={it.id}><button className="linkbtn" type="button" disabled={busy} onClick={() => void fromDesk(it)}>{it.title || '제목 없음'} · {it.len}자</button></div>
+                    ))}
+                    <div style={{ marginTop: 10 }}><b>💬 이야기 교실</b></div>
+                    {rooms.length === 0 && <p style={{ margin: '4px 0' }}>이 기기에서 들어간 방이 없어요.</p>}
+                    {rooms.map((r) => (
+                        <div key={r.code + r.nickname}><button className="linkbtn" type="button" disabled={busy} onClick={() => void fromRoom(r)}>방 {r.code} · {r.nickname}</button></div>
+                    ))}
+                    {busy && <p role="status" style={{ margin: '6px 0' }}>가져오는 중…</p>}
+                    {msg && <p role="alert" style={{ margin: '6px 0', color: 'var(--tomato)' }}>{msg}</p>}
+                </div>
+            )}
+        </div>
+    )
+}
+
 /* ───────── 퀘스트 ───────── */
 function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () => void }) {
     const { writer, quests, activeQuestId, startQuest, setRawText, stamp, finishQuest, setActive, library } = useWriterStore()
@@ -356,9 +415,10 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
                         <button key={x.id} role="tab" aria-selected={genre === x.id} className={genre === x.id ? 'on' : ''} onClick={() => setGenre(x.id)}>{x.emoji} {x.title}</button>
                     ))}
                 </div>
-                {GENRES.some((x) => x.unlockLevel > w.level) && <p className="locked">잠긴 장르가 있어요. 레벨이 오르면 열려요.</p>}
+                {GENRES.some((x) => x.unlockLevel > w.level) && <p className="locked">🔒 {GENRES.filter((x) => x.unlockLevel > w.level).map((x) => `${x.title}는 레벨 ${x.unlockLevel}에서`).join(', ')} 열려요.</p>}
                 <p style={{ margin: '6px 0' }}>{g.intro}</p>
                 <div className="mission">{g.mission}</div>
+                <SeedImport onPick={(t) => setSeed(t.slice(0, MAX_SEED))} />
                 <label className="dl"><dt>이야기 씨앗 (진짜 이름·학교 없이, 지어낸 이야기로)</dt>
                     <textarea className="paste" value={seed} maxLength={MAX_SEED} onChange={(e) => setSeed(e.target.value)} placeholder="예: 비 오는 날 우산이 하나뿐인 두 친구(별이, 구름이)" />
                 </label>
