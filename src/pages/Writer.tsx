@@ -485,6 +485,9 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
                     )}
                     {hits.length === 0 && <button className="linkbtn" disabled={!allChecked} onClick={() => copy(active.prompt)}>{allChecked ? 'AI 주문서 복사하기' : '위 체크를 모두 해야 복사할 수 있어요'}</button>}
                     <p className="note">{SAFETY_GUIDE.note}</p>
+                    {!active.stanzas.length && (
+                        <button type="button" className="linkbtn" style={{ fontSize: 14, background: 'transparent', boxShadow: 'none', textDecoration: 'underline' }} onClick={() => { setActive(null); setChecks([false]); setCopied(false); setPaste('') }}>← 1단계로 돌아가 주제 고치기</button>
+                    )}
                 </li>
 
                 <li className={`step${active.stanzas.length ? ' done' : ''}${copied ? '' : ' lock'}`}><span className="no">3</span>
