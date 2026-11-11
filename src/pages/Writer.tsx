@@ -10,7 +10,7 @@ import { EVENT_MOOD, getTemper, moodLine } from '../lib/writerLook'
 import { GENRES, getGenre } from '../data/genres'
 import { SAFETY_GUIDE } from '../data/safetyGuide'
 import { checkPrivacy, maskHits } from '../lib/privacyCheck'
-import { buildPrompt, MAX_RAW, MAX_SEED, MIN_REASON, STAMP_LABEL, STAMP_XP, xpForNext } from '../lib/writerPrompt'
+import { buildPrompt, MAX_RAW, MAX_SAMPLES, MAX_SEED, MAX_TOPIC, MIN_REASON, STAMP_LABEL, STAMP_XP, xpForNext } from '../lib/writerPrompt'
 import { deskGet, deskList, loadDeskSession, type DeskPieceItem } from '../lib/desk'
 import { loadHistory, relayCheck, type SavedSession } from '../lib/relay'
 import { sendToBook } from '../lib/writerBook'
@@ -326,8 +326,16 @@ function Room() {
     )
 }
 
+// 글 한 편에서 "주제 한 줄"만 뽑는다: 제목이 있으면 제목, 없으면 첫 문장
+function shortTopic(title: string, body: string): string {
+    const t = title.trim()
+    if (t.length >= 5 && t !== '제목 없음') return t.slice(0, MAX_TOPIC)
+    const first = body.trim().split(/(?<=[.!?。])\s|\n/)[0] ?? ''
+    return first.slice(0, MAX_TOPIC)
+}
+
 /* ───────── 내 글에서 씨앗 가져오기 (작가의 책상·이야기 교실) ───────── */
-function SeedImport({ onPick }: { onPick: (text: string) => void }) {
+function SeedImport({ onPick }: { onPick: (full: string, topic: string) => void }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState('')
@@ -346,7 +354,7 @@ function SeedImport({ onPick }: { onPick: (text: string) => void }) {
     async function fromDesk(it: DeskPieceItem) {
         if (!deskKey) return
         setBusy(true); setMsg('')
-        try { const d = await deskGet(deskKey, it.id); onPick(`${d.title}\n${d.body}`.trim()); setOpen(false) } catch { setMsg('글을 못 가져왔어요.') } finally { setBusy(false) }
+        try { const d = await deskGet(deskKey, it.id); onPick(`${d.title}\n${d.body}`.trim(), shortTopic(d.title, d.body)); setOpen(false) } catch { setMsg('글을 못 가져왔어요.') } finally { setBusy(false) }
     }
     async function fromRoom(r: SavedSession) {
         setBusy(true); setMsg('')
@@ -354,7 +362,7 @@ function SeedImport({ onPick }: { onPick: (text: string) => void }) {
             const st = await relayCheck(r.code, r.token, 0, 0)
             const text = (st.lines ?? []).filter((l) => !l.sys).map((l) => l.t).join(' ')
             if (!text) setMsg('이 방에는 아직 쓴 글이 없어요.')
-            else { onPick(text); setOpen(false) }
+            else { onPick(text, shortTopic('', text)); setOpen(false) }
         } catch { setMsg('방 이야기를 못 가져왔어요. 방이 닫혔을 수 있어요.') } finally { setBusy(false) }
     }
 
@@ -363,7 +371,7 @@ function SeedImport({ onPick }: { onPick: (text: string) => void }) {
             <button className="linkbtn" type="button" onClick={() => void toggle()}>{open ? '목록 닫기' : '📥 내 글에서 가져오기'}</button>
             {open && (
                 <div style={{ marginTop: 8, border: '2px solid var(--ink-2)', padding: 12, background: '#fff', fontSize: 16, lineHeight: 1.6 }}>
-                    <p style={{ margin: '0 0 8px', color: 'var(--ink-2)' }}>가져온 글은 씨앗 칸에서 고칠 수 있어요. 진짜 이름·학교가 있으면 지워 주세요. 씨앗은 {MAX_SEED}자까지예요.</p>
+                    <p style={{ margin: '0 0 8px', color: 'var(--ink-2)' }}>‘주제 한 줄’ 모드에서는 제목(없으면 첫 문장)만 가져와요. 글 전체는 ‘글 바탕으로 이어 쓰기’를 고르면 들어와요. 칸에서 고칠 수 있고, 진짜 이름·학교는 지워 주세요.</p>
                     <b>📖 작가의 책상</b>
                     {!deskKey && <p style={{ margin: '4px 0' }}>이 기기에서 책상에 들어간 적이 없어요. 작가의 책상에서 열쇠로 먼저 들어가 주세요.</p>}
                     {deskKey && pieces && pieces.length === 0 && <p style={{ margin: '4px 0' }}>저장한 글이 아직 없어요.</p>}
@@ -390,7 +398,9 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
     const active = quests.find((q) => q.id === activeQuestId && q.status !== 'done') ?? null
     const [genre, setGenre] = useState<GenreId>('fairytale')
     const [seed, setSeed] = useState('')
-    const [checks, setChecks] = useState([false, false, false])
+    const [mode, setMode] = useState<'topic' | 'continue'>('topic')
+    const [useSamples, setUseSamples] = useState(false)
+    const [checks, setChecks] = useState([false])
     const [copied, setCopied] = useState(false)
     const [paste, setPaste] = useState('')
     const [reasons, setReasons] = useState<Record<number, string>>({})
@@ -403,9 +413,9 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
             <>
                 <p className="kicker">오늘의 퀘스트</p>
                 <h2>무엇을 쓸까요?</h2>
-                <p className="lead">AI 친구와 글을 쓰는 4걸음이에요. 먼저 장르를 고르고 이야기 씨앗을 적어요.</p>
+                <p className="lead">AI 친구와 글을 쓰는 4걸음이에요. 먼저 장르를 고르고 오늘의 주제를 적어요. 말투는 내 글 모음에서 배워요.</p>
                 <ol className="flow" aria-label="글쓰기 4걸음">
-                    <li><span className="no">1</span><b>씨앗 적기</b><small>쓰고 싶은 이야기를 짧게</small></li>
+                    <li><span className="no">1</span><b>주제 적기</b><small>오늘 쓸 주제를 짧게</small></li>
                     <li><span className="no">2</span><b>AI 주문서 복사</b><small>앱이 만든 주문서를 복사</small></li>
                     <li><span className="no">3</span><b>AI 창에 붙이기</b><small>ChatGPT·Gemini에 붙여 넣기</small></li>
                     <li><span className="no">4</span><b>결과 가져와 도장</b><small>글을 붙이고 채택·고침·폐기</small></li>
@@ -418,11 +428,19 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
                 {GENRES.some((x) => x.unlockLevel > w.level) && <p className="locked">🔒 {GENRES.filter((x) => x.unlockLevel > w.level).map((x) => `${x.title}는 레벨 ${x.unlockLevel}에서`).join(', ')} 열려요.</p>}
                 <p style={{ margin: '6px 0' }}>{g.intro}</p>
                 <div className="mission">{g.mission}</div>
-                <SeedImport onPick={(t) => setSeed(t.slice(0, MAX_SEED))} />
-                <label className="dl"><dt>이야기 씨앗 (진짜 이름·학교 없이, 지어낸 이야기로)</dt>
-                    <textarea className="paste" value={seed} maxLength={MAX_SEED} onChange={(e) => setSeed(e.target.value)} placeholder="예: 비 오는 날 우산이 하나뿐인 두 친구(별이, 구름이)" />
+                <div className="seg" role="tablist" aria-label="씨앗 종류">
+                    <button role="tab" aria-selected={mode === 'topic'} className={mode === 'topic' ? 'on' : ''} onClick={() => { setMode('topic'); setSeed((x) => x.slice(0, MAX_TOPIC)) }}>✨ 주제 한 줄</button>
+                    <button role="tab" aria-selected={mode === 'continue'} className={mode === 'continue' ? 'on' : ''} onClick={() => setMode('continue')}>📄 글 바탕으로 이어 쓰기</button>
+                </div>
+                <p className="note" style={{ margin: '6px 0' }}>{mode === 'topic' ? '내 말투는 ‘내 글 모음’에서 배워요. 여기에는 오늘 쓸 주제만 짧게 적어요.' : '내 글 한 편을 넣으면 AI가 그 글을 이어 쓰거나 고쳐 써요. 새 글을 쓰고 싶으면 ‘주제 한 줄’을 골라요.'}</p>
+                <SeedImport onPick={(full, topic) => setSeed(mode === 'continue' ? full.slice(0, MAX_SEED) : topic)} />
+                <label className="dl"><dt>{mode === 'topic' ? `오늘의 주제 (${MAX_TOPIC}자까지, 진짜 이름·학교 없이)` : `바탕이 될 내 글 (${MAX_SEED}자까지, 진짜 이름·학교 없이)`}</dt>
+                    <textarea className="paste" value={seed} maxLength={mode === 'topic' ? MAX_TOPIC : MAX_SEED} onChange={(e) => setSeed(e.target.value)} placeholder={mode === 'topic' ? '예: 비 오는 날 우산이 하나뿐인 두 친구(별이, 구름이)' : '이어 쓰거나 고치고 싶은 내 글을 넣어요'} />
                 </label>
-                <button className="linkbtn" disabled={seed.trim().length < 5} onClick={() => { startQuest(genre, buildPrompt(w.name, w.persona, genre, seed, library.length > 0)); setSeed(''); setChecks([false, false, false]); setCopied(false); setPaste('') }}>AI 주문서 만들기</button>
+                {library.length > 0 && (
+                    <label style={{ display: 'block', fontSize: 16, margin: '8px 0' }}><input type="checkbox" checked={useSamples} onChange={(e) => setUseSamples(e.target.checked)} /> 내 글 샘플도 주문서에 붙이기 (최근 {Math.min(library.length, MAX_SAMPLES)}편 · 파일을 올릴 수 없을 때)</label>
+                )}
+                <button className="linkbtn" disabled={seed.trim().length < 5} onClick={() => { startQuest(genre, buildPrompt(w.name, w.persona, genre, seed, { useLibrary: library.length > 0, mode, samples: useSamples ? library.slice(-MAX_SAMPLES).map((x) => x.text) : [] })); setSeed(''); setUseSamples(false); setChecks([false]); setCopied(false); setPaste('') }}>AI 주문서 만들기</button>
             </>
         )
     }
@@ -449,7 +467,7 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
             <h2>글 한 편 완성하기</h2>
             <p className="lead">{g.mission}</p>
             <ol className="steps">
-                <li className="step done"><span className="no">1</span><h3>이야기 씨앗</h3><p className="reasontxt">씨앗과 설정서로 AI 주문서를 만들었어요.</p></li>
+                <li className="step done"><span className="no">1</span><h3>오늘의 주제</h3><p className="reasontxt">주제와 설정서로 AI 주문서를 만들었어요.</p></li>
 
                 <li className={`step${copied ? ' done' : ''}`}><span className="no">2</span>
                     <h3>AI 주문서 복사하기</h3>

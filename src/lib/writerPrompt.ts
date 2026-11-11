@@ -5,21 +5,40 @@ import type { GenreId } from '../types/writer'
 export const MAX_SEED = 600
 export const MAX_RAW = 4000
 
-export function buildPrompt(writerName: string, persona: Persona, genre: GenreId, seed: string, useLibrary = false): string {
+export const MAX_TOPIC = 120
+export const MAX_SAMPLES = 3
+export const SAMPLE_CHARS = 400
+
+export interface PromptOptions {
+    /** 내 글 모음 파일을 올려 쓸 때 (말투는 그 파일 전체에서 배운다) */
+    useLibrary?: boolean
+    /** 'topic'=오늘 쓸 주제 한 줄, 'continue'=내 글 한 편을 바탕으로 이어 쓰기·고쳐 쓰기 */
+    mode?: 'topic' | 'continue'
+    /** 파일을 올릴 수 없을 때 주문서 아래에 직접 붙이는 내 글 샘플 */
+    samples?: string[]
+}
+
+export function buildPrompt(writerName: string, persona: Persona, genre: GenreId, seed: string, opt: PromptOptions = {}): string {
     const g = getGenre(genre)
-    return [
+    const mode = opt.mode ?? 'topic'
+    const samples = (opt.samples ?? []).map((t) => t.trim().slice(0, SAMPLE_CHARS)).filter(Boolean).slice(0, MAX_SAMPLES)
+    const lines = [
         `너는 "${writerName}"라는 AI 작가야.`,
         `성격: ${persona.personality || '다정하고 호기심 많음'}`,
         `말투: ${persona.tone || '쉽고 부드러운 말투'}`,
         `좋아하는 것: ${persona.likes || '없음'}`,
         `절대 쓰지 않는 것: ${persona.avoids || '없음'}, 욕설, 무서운 장면, 실제 사람의 이름`,
-        ...(useLibrary ? ['', `첨부한 "내 글 모음" 파일을 먼저 읽고, 그 글의 말투와 자주 쓰는 표현, 문장 길이를 닮게 써 줘. 파일을 못 읽으면 위 설정만 따라 줘.`] : []),
-        '',
-        g.ask,
-        '',
-        `[이야기 씨앗]`,
-        seed.trim().slice(0, MAX_SEED),
-    ].join('\n')
+    ]
+    if (opt.useLibrary) lines.push('', `첨부한 "내 글 모음" 파일을 먼저 읽고, 그 글 전체에서 말투와 자주 쓰는 표현, 문장 길이를 배워서 닮게 써 줘. 파일을 못 읽으면 위 설정만 따라 줘.`)
+    if (samples.length) lines.push('', `아래 [내 글 샘플]도 말투를 배우는 자료야. 샘플 문장을 그대로 베끼지 말고, 말투만 닮게 새로 써 줘.`)
+    lines.push('', g.ask, '')
+    if (mode === 'continue') {
+        lines.push(`[바탕이 되는 내 글]`, seed.trim().slice(0, MAX_SEED), '', `위 글의 이야기를 이어 쓰거나 더 좋게 고쳐 써 줘. 내 글의 말투는 그대로 지켜 줘.`)
+    } else {
+        lines.push(`[이야기 씨앗]`, seed.trim().slice(0, MAX_TOPIC), '', `[이야기 씨앗]은 이번에 쓸 주제일 뿐이야. 말투는 내 글 전체에서 배우고, 씨앗 문장을 그대로 베끼지 말고 새로 써 줘.`)
+    }
+    if (samples.length) lines.push('', `[내 글 샘플]`, ...samples.map((t, i) => `(${i + 1}) ${t}`))
+    return lines.join('\n')
 }
 
 // AI가 준 글을 빈 줄 기준 문단으로 나눈다
