@@ -73,6 +73,25 @@ export const LIBRARY_XP = 20
 export const MAX_LIBRARY = 40
 export const MAX_LIB_TEXT = 4000
 
+// 내 글이 얼마나 모여야 내 말투를 배울 수 있나 (첫 수업 뒤 여기 숫자만 고치면 돼요)
+export const MIN_PIECE_CHARS = 100 // 한 편으로 쳐 주는 최소 글자 수
+export const LIB_TIERS = [
+    { id: 'start', emoji: '🌱', label: '시작 가능', pieces: 3, chars: 600, msg: '시작할 수 있어요. 글이 더 모이면 더 나를 닮아요.' },
+    { id: 'good', emoji: '🌿', label: '추천', pieces: 5, chars: 1500, msg: '좋아요! 나를 꽤 닮은 글이 나올 거예요.' },
+    { id: 'great', emoji: '🌳', label: '아주 좋음', pieces: 10, chars: 2500, msg: '내 말투를 아주 잘 배울 수 있어요.' },
+] as const
+
+export function libraryReadiness(texts: string[]) {
+    const good = texts.filter((t) => t.trim().length >= MIN_PIECE_CHARS)
+    const pieces = good.length
+    const chars = good.reduce((n, t) => n + t.trim().length, 0)
+    let tier = -1
+    LIB_TIERS.forEach((t, i) => { if (pieces >= t.pieces && chars >= t.chars) tier = i })
+    const next = LIB_TIERS[tier + 1] ?? null
+    const percent = Math.min(100, Math.round((Math.min(pieces / LIB_TIERS[2].pieces, 1) * 0.6 + Math.min(chars / LIB_TIERS[2].chars, 1) * 0.4) * 100))
+    return { pieces, chars, tier, current: tier >= 0 ? LIB_TIERS[tier] : null, next, percent, short: texts.length - pieces }
+}
+
 // 내 글의 특징 카드 (기기 안에서만 계산, 서버·AI 호출 없음)
 export function styleCard(texts: string[]): string[] {
     const all = texts.join('\n')

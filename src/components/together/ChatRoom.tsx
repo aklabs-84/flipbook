@@ -7,6 +7,7 @@ import StoryPanel from './StoryPanel'
 import PageDecorator from './PageDecorator'
 import { useAsk } from './useAsk'
 import { useWriterStore } from '../../store/writerStore'
+import { MIN_PIECE_CHARS } from '../../lib/writerPrompt'
 
 type Phase = 'idle' | 'loading' | 'empty' | 'new' | 'fail'
 
@@ -50,7 +51,7 @@ export default function ChatRoom({ session, onLeave }: Props) {
     const mine = lines.filter(l => !l.sys && l.w === me).map(l => l.t).join('\n\n')
     if (mine.trim().length < 10) { setShared('내가 쓴 문장이 아직 적어요. 조금 더 쓰고 눌러 주세요.'); return }
     const r = addToLibrary({ source: 'together', ref: code, title: `${name || '이야기 교실'}에서 내가 쓴 문장`, text: mine })
-    setShared(r === 'full' ? 'AI 작가 책장이 가득 찼어요.' : r === 'updated' ? '책장의 글을 새 내용으로 바꿨어요.' : 'AI 작가에게 보여줬어요! 경험치도 받았어요.')
+    setShared(r === 'full' ? 'AI 작가 책장이 가득 찼어요.' : r === 'updated' ? '책장의 글을 새 내용으로 바꿨어요.' : 'AI 작가에게 보여줬어요! 경험치도 받았어요.') + (mine.trim().length < MIN_PIECE_CHARS ? ` 그런데 ${MIN_PIECE_CHARS}자보다 짧아서 ‘내 글 편수’에는 아직 안 세요. 조금만 더 써 볼까요?` : '')
   }
 
   const verRef = useRef(-1)

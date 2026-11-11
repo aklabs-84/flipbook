@@ -10,7 +10,7 @@ import { EVENT_MOOD, getTemper, moodLine } from '../lib/writerLook'
 import { GENRES, getGenre } from '../data/genres'
 import { SAFETY_GUIDE } from '../data/safetyGuide'
 import { checkPrivacy, maskHits } from '../lib/privacyCheck'
-import { buildPrompt, MAX_RAW, MAX_SAMPLES, MAX_SEED, MAX_TOPIC, MIN_REASON, STAMP_LABEL, STAMP_XP, xpForNext } from '../lib/writerPrompt'
+import { buildPrompt, libraryReadiness, LIB_TIERS, MIN_PIECE_CHARS, MAX_RAW, MAX_SAMPLES, MAX_SEED, MAX_TOPIC, MIN_REASON, STAMP_LABEL, STAMP_XP, xpForNext } from '../lib/writerPrompt'
 import { deskGet, deskList, loadDeskSession, type DeskPieceItem } from '../lib/desk'
 import { loadHistory, relayCheck, type SavedSession } from '../lib/relay'
 import { sendToBook } from '../lib/writerBook'
@@ -391,6 +391,8 @@ function SeedImport({ onPick }: { onPick: (full: string, topic: string) => void 
     )
 }
 
+const TOPIC_EXAMPLES = ['잃어버린 장갑을 찾는 하루', '처음 전학 온 날', '달에 사는 토끼의 편지']
+
 /* ───────── 퀘스트 ───────── */
 function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () => void }) {
     const { writer, quests, activeQuestId, startQuest, setRawText, stamp, finishQuest, setActive, library } = useWriterStore()
@@ -400,6 +402,7 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
     const [seed, setSeed] = useState('')
     const [mode, setMode] = useState<'topic' | 'continue'>('topic')
     const [useSamples, setUseSamples] = useState(false)
+    const [warnOpen, setWarnOpen] = useState(false)
     const [checks, setChecks] = useState([false])
     const [copied, setCopied] = useState(false)
     const [paste, setPaste] = useState('')
@@ -409,38 +412,76 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
 
     if (!active) {
         const g = getGenre(genre)
+        const ready = libraryReadiness(library.map((x) => x.text))
+        const canMake = seed.trim().length >= 5
+        const makeQuest = () => { startQuest(genre, buildPrompt(w.name, w.persona, genre, seed, { useLibrary: library.length > 0, mode, samples: useSamples ? library.slice(-MAX_SAMPLES).map((x) => x.text) : [] })); setSeed(''); setUseSamples(false); setChecks([false]); setCopied(false); setPaste('') }
         return (
             <>
                 <p className="kicker">오늘의 퀘스트</p>
                 <h2>무엇을 쓸까요?</h2>
-                <p className="lead">AI 친구와 글을 쓰는 4걸음이에요. 먼저 장르를 고르고 오늘의 주제를 적어요. 말투는 내 글 모음에서 배워요.</p>
-                <ol className="flow" aria-label="글쓰기 4걸음">
-                    <li><span className="no">1</span><b>주제 적기</b><small>오늘 쓸 주제를 짧게</small></li>
-                    <li><span className="no">2</span><b>AI 주문서 복사</b><small>앱이 만든 주문서를 복사</small></li>
-                    <li><span className="no">3</span><b>AI 창에 붙이기</b><small>ChatGPT·Gemini에 붙여 넣기</small></li>
-                    <li><span className="no">4</span><b>결과 가져와 도장</b><small>글을 붙이고 채택·고침·폐기</small></li>
-                </ol>
-                <div className="seg" role="tablist">
-                    {GENRES.filter((x) => x.unlockLevel <= w.level).map((x) => (
-                        <button key={x.id} role="tab" aria-selected={genre === x.id} className={genre === x.id ? 'on' : ''} onClick={() => setGenre(x.id)}>{x.emoji} {x.title}</button>
-                    ))}
+                <div className="qguide"><b>이 화면에서 하는 일</b>
+                    <p>내 글을 닮은 AI 작가에게 글을 부탁하는 <u>주문서</u>를 만드는 곳이에요. 아래 3칸만 채우면 돼요. 만든 주문서는 다음 화면에서 복사해서 ChatGPT나 Gemini에 붙여 넣어요.</p></div>
+                <section className="qcard">
+                    <h3><span className="no">1</span>장르 고르기</h3>
+                    <p className="why">어떤 종류의 글을 받고 싶은지 골라요.</p>
+                    <div className="seg" role="tablist">
+                        {GENRES.filter((x) => x.unlockLevel <= w.level).map((x) => (
+                            <button key={x.id} role="tab" aria-selected={genre === x.id} className={genre === x.id ? 'on' : ''} onClick={() => setGenre(x.id)}>{x.emoji} {x.title}</button>
+                        ))}
+                    </div>
+                    {GENRES.some((x) => x.unlockLevel > w.level) && <p className="locked">🔒 {GENRES.filter((x) => x.unlockLevel > w.level).map((x) => `${x.title}는 레벨 ${x.unlockLevel}에서`).join(', ')} 열려요.</p>}
+                    <p style={{ margin: '6px 0' }}>{g.intro}</p>
+                    <div className="mission">{g.mission}</div>
+                </section>
+                <section className="qcard">
+                    <h3><span className="no">2</span>{mode === 'topic' ? '주제 쓰기' : '바탕 글 넣기'}</h3>
+                    <p className="why">{mode === 'topic' ? '말투는 내 글에서 배우니까, 여기에는 오늘 쓸 주제만 짧게 써요.' : '내 글 한 편을 넣으면 AI가 그 글을 이어 쓰거나 고쳐 써요.'}</p>
+                    <div className="seg" role="tablist" aria-label="씨앗 종류">
+                        <button role="tab" aria-selected={mode === 'topic'} className={mode === 'topic' ? 'on' : ''} onClick={() => { setMode('topic'); setSeed((x) => x.slice(0, MAX_TOPIC)) }}>✨ 새 글 쓰기</button>
+                        <button role="tab" aria-selected={mode === 'continue'} className={mode === 'continue' ? 'on' : ''} onClick={() => setMode('continue')}>📄 내 글 이어 쓰기</button>
+                    </div>
+                    <label className="dl"><dt>{mode === 'topic' ? `오늘의 주제 (${MAX_TOPIC}자까지, 진짜 이름·학교 없이)` : `바탕이 될 내 글 (${MAX_SEED}자까지, 진짜 이름·학교 없이)`}</dt>
+                        <textarea className="paste" value={seed} maxLength={mode === 'topic' ? MAX_TOPIC : MAX_SEED} onChange={(e) => setSeed(e.target.value)} placeholder={mode === 'topic' ? '예: 비 오는 날 우산이 하나뿐인 두 친구(별이, 구름이)' : '이어 쓰거나 고치고 싶은 내 글을 넣어요'} />
+                    </label>
+                    {mode === 'topic' && (
+                        <div className="chips" aria-label="예시 주제">
+                            <small>막막하면 눌러 보세요:</small>
+                            {TOPIC_EXAMPLES.map((t) => <button key={t} type="button" onClick={() => setSeed(t)}>{t}</button>)}
+                        </div>
+                    )}
+                    <SeedImport onPick={(full, topic) => setSeed(mode === 'continue' ? full.slice(0, MAX_SEED) : topic)} />
+                </section>
+                <section className="qcard">
+                    <h3><span className="no">3</span>내 글 준비 확인</h3>
+                    <p className="why">AI가 내 말투를 배우려면 내 글이 여러 편 필요해요. 글은 ‘작가의 책상’과 ‘이야기 교실’에서 모여요.</p>
+                    <div className="ready" role="status">
+                        <div className="rbar" aria-hidden="true"><i style={{ width: `${ready.percent}%` }} /></div>
+                        <p className="rnum"><b>{ready.current ? `${ready.current.emoji} ${ready.current.label}` : '🥚 아직 준비 중'}</b> · 내 글 {ready.pieces}편 · {ready.chars.toLocaleString()}자</p>
+                        <p className="rmsg">{ready.current ? ready.current.msg : `${LIB_TIERS[0].pieces}편(${LIB_TIERS[0].chars}자 이상)이 되면 시작할 수 있어요.`}{ready.next && ready.current ? ` ${ready.next.emoji} ${ready.next.pieces}편이 되면 ‘${ready.next.label}’이에요.` : ''}</p>
+                        {ready.short > 0 && <p className="rmsg">글자가 {MIN_PIECE_CHARS}자보다 짧은 글 {ready.short}편은 세지 않았어요. 조금만 더 써 볼까요?</p>}
+                    </div>
+                    
+                    {library.length > 0 && (
+                        <label style={{ display: 'block', fontSize: 16, margin: '10px 0 0' }}><input type="checkbox" checked={useSamples} onChange={(e) => setUseSamples(e.target.checked)} /> 내 글 샘플도 주문서에 붙이기 (최근 {Math.min(library.length, MAX_SAMPLES)}편 · 파일을 올릴 수 없을 때)</label>
+                    )}
+                </section>
+                <div className="qgo">
+                    <button className="qbtn" disabled={!canMake} onClick={() => (ready.tier < 0 ? setWarnOpen(true) : makeQuest())}>AI 주문서 만들기</button>
+                    {!canMake && <span className="qreason">{mode === 'topic' ? '주제를 5자 이상 적으면 눌러져요' : '바탕 글을 5자 이상 넣으면 눌러져요'}</span>}
                 </div>
-                {GENRES.some((x) => x.unlockLevel > w.level) && <p className="locked">🔒 {GENRES.filter((x) => x.unlockLevel > w.level).map((x) => `${x.title}는 레벨 ${x.unlockLevel}에서`).join(', ')} 열려요.</p>}
-                <p style={{ margin: '6px 0' }}>{g.intro}</p>
-                <div className="mission">{g.mission}</div>
-                <div className="seg" role="tablist" aria-label="씨앗 종류">
-                    <button role="tab" aria-selected={mode === 'topic'} className={mode === 'topic' ? 'on' : ''} onClick={() => { setMode('topic'); setSeed((x) => x.slice(0, MAX_TOPIC)) }}>✨ 주제 한 줄</button>
-                    <button role="tab" aria-selected={mode === 'continue'} className={mode === 'continue' ? 'on' : ''} onClick={() => setMode('continue')}>📄 글 바탕으로 이어 쓰기</button>
-                </div>
-                <p className="note" style={{ margin: '6px 0' }}>{mode === 'topic' ? '내 말투는 ‘내 글 모음’에서 배워요. 여기에는 오늘 쓸 주제만 짧게 적어요.' : '내 글 한 편을 넣으면 AI가 그 글을 이어 쓰거나 고쳐 써요. 새 글을 쓰고 싶으면 ‘주제 한 줄’을 골라요.'}</p>
-                <SeedImport onPick={(full, topic) => setSeed(mode === 'continue' ? full.slice(0, MAX_SEED) : topic)} />
-                <label className="dl"><dt>{mode === 'topic' ? `오늘의 주제 (${MAX_TOPIC}자까지, 진짜 이름·학교 없이)` : `바탕이 될 내 글 (${MAX_SEED}자까지, 진짜 이름·학교 없이)`}</dt>
-                    <textarea className="paste" value={seed} maxLength={mode === 'topic' ? MAX_TOPIC : MAX_SEED} onChange={(e) => setSeed(e.target.value)} placeholder={mode === 'topic' ? '예: 비 오는 날 우산이 하나뿐인 두 친구(별이, 구름이)' : '이어 쓰거나 고치고 싶은 내 글을 넣어요'} />
-                </label>
-                {library.length > 0 && (
-                    <label style={{ display: 'block', fontSize: 16, margin: '8px 0' }}><input type="checkbox" checked={useSamples} onChange={(e) => setUseSamples(e.target.checked)} /> 내 글 샘플도 주문서에 붙이기 (최근 {Math.min(library.length, MAX_SAMPLES)}편 · 파일을 올릴 수 없을 때)</label>
+                {warnOpen && (
+                    <div className="qmodal" role="dialog" aria-modal="true" aria-labelledby="qwarn-t" onClick={() => setWarnOpen(false)}>
+                        <div className="qbox" onClick={(e) => e.stopPropagation()}>
+                            <h3 id="qwarn-t">내 글이 아직 적어요</h3>
+                            <p>지금 내 글은 {ready.pieces}편 · {ready.chars.toLocaleString()}자예요. AI가 내 말투를 잘 배우려면 {LIB_TIERS[0].pieces}편({LIB_TIERS[0].chars}자) 이상이 좋아요.</p>
+                            <p>그래도 만들 수 있지만, 나를 덜 닮은 글이 나올 수 있어요. 계속할까요?</p>
+                            <div className="qbtns">
+                                <button type="button" className="qbtn" autoFocus onClick={() => setWarnOpen(false)}>글 더 모으러 갈게요</button>
+                                <button type="button" className="backbtn" style={{ marginTop: 0 }} onClick={() => { setWarnOpen(false); makeQuest() }}>그래도 만들래요</button>
+                            </div>
+                        </div>
+                    </div>
                 )}
-                <button className="linkbtn" disabled={seed.trim().length < 5} onClick={() => { startQuest(genre, buildPrompt(w.name, w.persona, genre, seed, { useLibrary: library.length > 0, mode, samples: useSamples ? library.slice(-MAX_SAMPLES).map((x) => x.text) : [] })); setSeed(''); setUseSamples(false); setChecks([false]); setCopied(false); setPaste('') }}>AI 주문서 만들기</button>
             </>
         )
     }
@@ -486,7 +527,7 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
                     {hits.length === 0 && <button className="linkbtn" disabled={!allChecked} onClick={() => copy(active.prompt)}>{allChecked ? 'AI 주문서 복사하기' : '위 체크를 모두 해야 복사할 수 있어요'}</button>}
                     <p className="note">{SAFETY_GUIDE.note}</p>
                     {!active.stanzas.length && (
-                        <button type="button" className="linkbtn" style={{ fontSize: 14, background: 'transparent', boxShadow: 'none', textDecoration: 'underline' }} onClick={() => { setActive(null); setChecks([false]); setCopied(false); setPaste('') }}>← 1단계로 돌아가 주제 고치기</button>
+                        <button type="button" className="backbtn" onClick={() => { setActive(null); setChecks([false]); setCopied(false); setPaste('') }}>← 1단계로 돌아가 주제 고치기</button>
                     )}
                 </li>
 

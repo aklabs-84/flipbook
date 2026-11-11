@@ -5,6 +5,7 @@ import DeskShelf from './DeskShelf'
 import { findSpellHints } from '../lib/spell'
 import { Link } from 'react-router-dom'
 import { useWriterStore } from '../store/writerStore'
+import { MIN_PIECE_CHARS } from '../lib/writerPrompt'
 import '../lib/classlog'
 import {
   deskCreateAuthor, deskLogin, deskSave, deskGet, deskList, loadDeskSession, saveDeskSession, clearDeskSession,
@@ -49,7 +50,7 @@ export default function Desk() {
   // 지금 쓰는 글을 AI 작가 책장에 복사한다 (이 기기 안에만 저장, 서버 요청 없음)
   const showWriter = () => {
     const r = addToLibrary({ source: 'desk', ref: piece.id ?? `new:${piece.title.trim()}`, title: piece.title.trim() || '(제목 없음)', text: piece.body })
-    setShown(r === 'full' ? 'AI 작가 책장이 가득 찼어요. AI 작가 방에서 오래된 글을 지워 주세요.' : r === 'updated' ? '책장의 글을 새 내용으로 바꿨어요.' : 'AI 작가에게 보여줬어요! 경험치도 받았어요.')
+    setShown(r === 'full' ? 'AI 작가 책장이 가득 찼어요. AI 작가 방에서 오래된 글을 지워 주세요.' : r === 'updated' ? '책장의 글을 새 내용으로 바꿨어요.' : 'AI 작가에게 보여줬어요! 경험치도 받았어요.') + (piece.body.trim().length < MIN_PIECE_CHARS ? ` 그런데 ${MIN_PIECE_CHARS}자보다 짧아서 ‘내 글 편수’에는 아직 안 세요. 조금만 더 써 볼까요?` : '')
   }
   const [err, setErr] = useState('')
   // 마지막으로 서버에 저장하거나 불러온 모습. 지금 글과 다르면 "저장 안 됨"

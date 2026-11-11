@@ -253,3 +253,37 @@ to{transform:rotate(-12deg) scale(1);opacity:1}
 .wr .tctable th{text-align:left;font-size:14px;color:var(--ink-2);padding:8px 10px;border-bottom:2px solid var(--ink);white-space:nowrap}
 .wr .tctable td{padding:12px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
 .wr .tctable tbody tr:hover{background:var(--wall)}
+
+/* 퀘스트 입력 화면 (시안 B: 번호 칸 3개) */
+.wr .qguide{background:var(--wall);border-left:5px solid var(--mustard);padding:12px 16px;margin:6px 0 18px}
+.wr .qguide b{font-size:16px}
+.wr .qguide p{margin:4px 0 0;font-size:16px;line-height:1.6}
+.wr .qcard{border-top:2px dashed var(--line);padding:16px 0 6px}
+.wr .qcard h3{margin:0;font-size:19px;display:flex;align-items:center;gap:8px}
+.wr .qcard .no{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--ink);color:#FFF8E7;font-size:16px}
+.wr .qcard .why{margin:4px 0 10px;color:var(--ink-2);font-size:16px}
+.wr .chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.wr .chips small{font-size:14px;color:var(--ink-2)}
+.wr .chips button{border:2px solid var(--ink);background:var(--paper);padding:4px 12px;font-size:15px;min-height:36px;transition:background .15s}
+.wr .chips button:hover{background:var(--mustard)}
+.wr .ready{background:var(--paper);border:2px solid var(--line);padding:12px 14px}
+.wr .rbar{height:12px;background:var(--wall-d);overflow:hidden}
+.wr .rbar i{display:block;height:100%;background:var(--grass);transition:width .5s}
+.wr .rnum{margin:8px 0 2px;font-size:17px}
+.wr .rmsg{margin:2px 0 0;font-size:15px;color:var(--ink-2);line-height:1.55}
+.wr .qwarn{background:#FFF1C2;border-left:5px solid var(--mustard);padding:8px 12px;margin-top:10px;font-size:15px}
+.wr .qgo{display:flex;flex-wrap:wrap;align-items:center;gap:14px;border-top:2px dashed var(--line);padding-top:16px;margin-top:10px}
+.wr .qbtn{background:var(--ink);color:#FFF8E7;font-weight:700;font-size:18px;padding:12px 26px;min-height:48px;border:2px solid var(--ink);transition:background .2s,transform .15s}
+.wr .qbtn:hover{background:var(--tomato);border-color:var(--tomato);transform:translateY(-2px)}
+.wr .qbtn[disabled]{opacity:.4;pointer-events:none}
+.wr .qreason{font-size:15px;color:var(--ink-2)}
+.wr .backbtn{margin-top:14px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);font-weight:700;font-size:16px;padding:8px 16px;min-height:44px;transition:background .15s}
+.wr .backbtn:hover{background:var(--mustard);color:var(--ink)}
+@media (max-width:640px){.wr .qbtn{width:100%}}
+.wr .qmodal{position:fixed;inset:0;background:rgba(74,50,40,.55);display:grid;place-items:center;padding:16px;z-index:50}
+.wr .qbox{background:var(--paper);border:3px solid var(--ink);max-width:460px;width:100%;padding:22px 22px 18px}
+.wr .qbox h3{margin:0 0 8px;font-size:21px}
+.wr .qbox p{margin:6px 0;font-size:17px;line-height:1.6}
+.wr .qbtns{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.wr .qbtns .qbtn{padding:10px 18px;font-size:17px}
+@media (max-width:640px){.wr .qbtns>*{width:100%}}
