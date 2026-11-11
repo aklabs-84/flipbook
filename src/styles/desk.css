@@ -255,3 +255,21 @@
 .dk .pk-row:hover{background:rgba(0,0,0,.04)}
 .dk .pk-row span{font-size:14px;color:var(--mute)}
 .dk .unsaved{color:var(--red)}
+
+/* 서재 보기 전환(책장 / 모아 보기) + 모아 보기 목록 */
+.dk .vtog{display:flex;gap:28px;margin:0 0 14px}
+.dk .vtog button{border:0;background:none;font:500 17px 'Pretendard Variable',sans-serif;color:var(--mute);cursor:pointer;padding:8px 0;min-height:44px;border-bottom:2px solid transparent}
+.dk .vtog button:hover{color:var(--ink)}
+.dk .vtog button.on{color:var(--ink);font-weight:700;border-color:var(--red)}
+.dk .collect .ctl{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:center;justify-content:space-between;border-top:2px solid var(--ink);padding-top:10px}
+.dk .collect .all{display:flex;gap:10px;align-items:center;min-height:44px;cursor:pointer}
+.dk .collect input[type=checkbox]{width:22px;height:22px;accent-color:var(--red);cursor:pointer;flex:none}
+.dk .collect .cmsg{margin:10px 0 0;font-size:16px}
+.dk .collect .empty{color:var(--mute);margin:18px 0}
+.dk .collect .clist{list-style:none;margin:8px 0 0;padding:0}
+.dk .collect .clist li{display:flex;justify-content:space-between;align-items:center;gap:12px 20px;flex-wrap:wrap;border-top:1px solid var(--line);padding:6px 0;min-height:56px}
+.dk .collect .clist li.off{opacity:.55}
+.dk .collect .clist label{display:flex;gap:14px;align-items:center;flex:1 1 260px;min-width:0;cursor:pointer}
+.dk .collect .clist .tt{display:block;min-width:0}
+.dk .collect .clist b{display:block;font:700 19px 'Gowun Batang',serif;overflow-wrap:anywhere}
+.dk .collect .clist small{display:block;color:var(--mute);font-size:15px}

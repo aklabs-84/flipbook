@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { deskList, deskGet, deskDelete, type DeskPieceItem, type DeskPiece, type DeskSession } from '../lib/desk'
 import { getClassLogCtx, viaClassLog, submitToClass, CLASSLOG_URL } from '../lib/classlog'
+import { useWriterStore } from '../store/writerStore'
+import DeskCollect from './DeskCollect'
 
 // ---- 글을 책 쪽으로 나누기 ----
 interface Line { t: string; dq: boolean }
@@ -59,6 +61,9 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
   const [cl, setCl] = useState(false) // 클래스로그AI 안내 창
   const [sent, setSent] = useState('')
   const [sending, setSending] = useState(false)
+  const [view, setView] = useState<'shelf' | 'collect'>('shelf')
+  const [toWriter, setToWriter] = useState(false)
+  const addToLibrary = useWriterStore(st => st.addToLibrary)
 
   const load = useCallback(async () => {
     try { setItems(await deskList(session.key)); setErr('') }
@@ -97,6 +102,19 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
     } catch (e) { setSent(e instanceof Error ? e.message : '제출하지 못했어요') }
     finally { setSending(false) }
   }
+  const showWriter = async () => {
+    if (!cur) return
+    if (cur.len < 30) { setSent('글이 아직 너무 짧아요. 조금 더 쓴 뒤에 AI 작가에게 보여줘요.'); return }
+    setToWriter(true); setSent('')
+    try {
+      const g = await deskGet(session.key, cur.id)
+      const r = addToLibrary({ source: 'desk', ref: g.id, title: g.title.trim() || '(제목 없음)', text: g.body })
+      setSent(r === 'full'
+        ? 'AI 작가 책장이 가득 찼어요. AI 작가 방에서 오래된 글을 지운 뒤 다시 해 보세요.'
+        : r === 'updated' ? '✔ 이미 보여 준 글이라 내용만 바꿨어요.' : '✔ AI 작가에게 글을 보여줬어요.')
+    } catch (e) { setSent(e instanceof Error ? e.message : '보여주지 못했어요') }
+    finally { setToWriter(false) }
+  }
   const open = async () => {
     if (!cur) return
     setAsk(false)
@@ -113,10 +131,29 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
 
   const sub = (i: DeskPieceItem) => `${i.genre || '글'} · ${fmtDate(i.updated_at)} · ${i.len}자`
 
+  const toggle = (
+    <div className="vtog" role="group" aria-label="보기 방식">
+      <button type="button" className={view === 'shelf' ? 'on' : ''} aria-pressed={view === 'shelf'} onClick={() => setView('shelf')}>책장</button>
+      <button type="button" className={view === 'collect' ? 'on' : ''} aria-pressed={view === 'collect'} onClick={() => setView('collect')}>모아 보기</button>
+    </div>
+  )
+
+  if (view === 'collect') return (
+    <div className="view shelf on">
+      <div>
+        <h2>내 서재</h2>
+        {toggle}
+        <p style={{ color: 'var(--mute)', margin: '0 0 18px' }}>내가 쓴 글을 한곳에서 보고, 골라서 AI 작가에게 한 번에 보내요.</p>
+      </div>
+      <DeskCollect session={session} items={items} onEdit={onEdit} />
+    </div>
+  )
+
   return (
     <div className="view shelf on">
       <div>
         <h2>내 서재</h2>
+        {toggle}
         <p style={{ color: 'var(--mute)', margin: '0 0 18px' }}>
           {done.length ? '쓴 글이 한 권씩 꽂혀요. 책등에 마우스를 올려 보세요.' : '아직 꽂힌 책이 없어요. 글을 쓰고 퇴고한 뒤 "서재에 꽂기"를 눌러 보세요.'}
         </p>
@@ -146,6 +183,7 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
               <button className="btn sub" type="button" onClick={() => onEdit(cur.id)}>고치기</button>
               <button className="btn sub" type="button" onClick={() => void remove(cur)}>지우기</button>
               <button className="btn sub" type="button" disabled={sending} onClick={() => void submit()}>{sending ? '내는 중…' : '선생님께 제출'}</button>
+              <button className="btn sub" type="button" disabled={toWriter} onClick={() => void showWriter()}>{toWriter ? '보여주는 중…' : 'AI 작가에게 보여주기'}</button>
               <a role="button" tabIndex={0} onClick={() => void open()} onKeyDown={e => { if (e.key === 'Enter') void open() }}>
                 {busy ? '여는 중…' : '펼쳐서 읽기 →'}
               </a>
