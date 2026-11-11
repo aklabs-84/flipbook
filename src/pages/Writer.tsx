@@ -13,6 +13,7 @@ import { checkPrivacy, maskHits } from '../lib/privacyCheck'
 import { buildPrompt, MAX_RAW, MAX_SEED, MIN_REASON, STAMP_LABEL, STAMP_XP, xpForNext } from '../lib/writerPrompt'
 import { sendToBook } from '../lib/writerBook'
 import { buildExportText, downloadText, exportSources, privacyProblems } from '../lib/writerLibrary'
+import { joinClass, leaveClass, loadMembership, sendReport, useClassSync, type ClassMembership } from '../lib/writerClass'
 import type { GenreId, Look, Mood, StampKind } from '../types/writer'
 
 type View = 'quest' | 'dex' | 'desk' | 'writer'
@@ -122,6 +123,7 @@ function CreateWriter() {
 /* ───────── 방 ───────── */
 function Room() {
     const { writer, quests, activeQuestId } = useWriterStore()
+    useClassSync()
     const [view, setView] = useState<View>('quest')
     const [toast, setToast] = useState('')
     const w = writer!
@@ -585,10 +587,65 @@ function SheetPanel({ toast, mood, onMood }: { toast: (m: string) => void; mood:
                 <LookEditor look={normalizeLook(w.look)} level={w.level} onChange={updateLook} mood={mood} onMood={onMood} />
             </div>
             <p className="note">이 기기의 브라우저에 저장돼요. 다른 기기에서는 보이지 않아요.</p>
+            <ClassSection toast={toast} />
             <div className="resetrow">
                 <button className="linkbtn" onClick={() => { if (window.confirm(`정말 ${w.name} 작가를 지우고 처음부터 다시 만들까요?\n\n레벨, 경험치, 써 온 글 기록이 모두 사라지고 되돌릴 수 없어요.\n(이미 플립북으로 보낸 책은 그대로 남아요)`)) { reset(); toast('새로 시작해요') } }}>처음부터 다시 만들기</button>
                 <span>작가를 새로 고르고 싶을 때 눌러요</span>
             </div>
         </>
+    )
+}
+
+// 선생님께 보여주기: 숫자(레벨·도장 수 등)와 별명만 보낸다. 글 내용은 보내지 않는다
+function ClassSection({ toast }: { toast: (m: string) => void }) {
+    const [m, setM] = useState<ClassMembership | null>(() => loadMembership())
+    const [code, setCode] = useState('')
+    const [nick, setNick] = useState('')
+    const [busy, setBusy] = useState(false)
+    const [err, setErr] = useState('')
+    useEffect(() => {
+        const on = () => setM(loadMembership())
+        window.addEventListener('ai-writer-class-change', on)
+        return () => window.removeEventListener('ai-writer-class-change', on)
+    }, [])
+    const join = async () => {
+        setBusy(true); setErr('')
+        try { setM(await joinClass(code, nick)); toast('선생님께 보여주기를 켰어요') }
+        catch (e) { setErr(e instanceof Error ? e.message : '잠시 후 다시 해 보세요') }
+        finally { setBusy(false) }
+    }
+    const off = async () => {
+        if (!m || !window.confirm('선생님께 보여주기를 끌까요?\n선생님 화면에서 내 기록이 지워져요. 내 작가는 그대로예요.')) return
+        setBusy(true)
+        await leaveClass(m)
+        setM(null); setBusy(false); toast('보여주기를 껐어요')
+    }
+    return (
+        <div className="lib" style={{ marginTop: 28 }}>
+            <h3>선생님께 보여주기</h3>
+            {m ? (
+                <>
+                    <p className="note" style={{ marginTop: 6 }}>켜져 있어요 · 교실 {m.code} · 별명 <b>{m.nickname}</b></p>
+                    <p className="note">레벨, 도장 수 같은 <b>숫자만</b> 가요. 내가 쓴 글은 가지 않아요.</p>
+                    <div className="resetrow">
+                        <button className="linkbtn" disabled={busy} onClick={async () => { setBusy(true); await sendReport(m); setBusy(false); toast('숫자를 보냈어요') }}>지금 숫자 보내기</button>
+                        <button className="linkbtn" disabled={busy} onClick={off}>끄기</button>
+                    </div>
+                </>
+            ) : (
+                <>
+                    <p className="note" style={{ marginTop: 6 }}>선생님이 알려 준 <b>교실 번호</b>와 내 <b>별명</b>을 쓰면, 선생님이 내 작가의 레벨을 볼 수 있어요. 글 내용은 가지 않고 숫자만 가요.</p>
+                    <label className="dl"><dt>교실 번호 (숫자 6개)</dt>
+                        <input className="wr-input" inputMode="numeric" maxLength={6} value={code} placeholder="예: 123456" onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+                    </label>
+                    <label className="dl"><dt>내 별명 (본명 말고 별명)</dt>
+                        <input className="wr-input" maxLength={12} value={nick} placeholder="예: 달빛" onChange={(e) => setNick(e.target.value)} />
+                    </label>
+                    {err && <p className="note" role="alert" style={{ color: 'var(--tomato)' }}>{err}</p>}
+                    <button className="linkbtn" disabled={busy || code.length !== 6 || nick.trim().length < 1} onClick={join}>선생님께 보여주기 켜기</button>
+                </>
+            )}
+            <p className="note"><Link to="/writer/teacher">선생님이세요? 교사 보기</Link></p>
+        </div>
     )
 }

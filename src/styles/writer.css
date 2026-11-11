@@ -244,3 +244,12 @@ to{transform:rotate(-12deg) scale(1);opacity:1}
 .wr .lib .pages .t{background:none;border:0;cursor:pointer;font:inherit;font-size:15px;color:var(--ink-2);text-decoration:underline;padding:4px 8px}
 .wr .lib .pages .t:hover{color:var(--tomato)}
 .wr .lib .howto{margin:16px 0 0;padding-left:22px;font-size:15px;line-height:1.7;color:var(--ink-2)}
+
+/* 교사 보기 */
+.wr .tclist{list-style:none;padding:0;margin:8px 0}
+.wr .tclist li{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px dashed var(--line)}
+.wr .tcwrap{overflow-x:auto;margin-top:12px}
+.wr .tctable{border-collapse:collapse;width:100%;min-width:760px;font-size:15px}
+.wr .tctable th{text-align:left;font-size:14px;color:var(--ink-2);padding:8px 10px;border-bottom:2px solid var(--ink);white-space:nowrap}
+.wr .tctable td{padding:12px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.wr .tctable tbody tr:hover{background:var(--wall)}

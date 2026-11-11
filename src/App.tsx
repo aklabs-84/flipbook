@@ -10,6 +10,7 @@ import Editor from './pages/Editor'
 import Viewer from './pages/Viewer'
 import Gallery from './pages/Gallery'
 import Writer from './pages/Writer'
+import WriterTeacher from './pages/WriterTeacher'
 import Together from './pages/Together'
 import Desk from './pages/Desk'
 import Profile from './pages/Profile'
@@ -55,6 +56,7 @@ function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/gallery" element={<Gallery />} />
                     <Route path="/writer" element={<Writer />} />
+                    <Route path="/writer/teacher" element={<WriterTeacher />} />
                     <Route path="/together" element={<Together />} />
                     <Route path="/desk" element={<Desk />} />
                     <Route path="/profile" element={<Profile />} />
