@@ -118,7 +118,13 @@ export default function Desk() {
 
   const publish = async () => {
     if (!piece.body.trim()) { setErr('본문을 먼저 써 주세요'); return }
-    if (await doSave('done')) { saveDeskDraft(null); setPiece(blank()); setSavedSig(''); setTab('shelf') }
+    // 발행해도 책상은 비우지 않는다 (뒤로 와도 글이 보이게). 새 글은 '새 글 쓰기'로 시작
+    if (await doSave('done')) setTab('shelf')
+  }
+
+  const newPiece = () => {
+    if (unsaved && !window.confirm('지금 쓰던 글이 아직 저장되지 않았어요.\n그래도 새 글을 시작할까요?')) return
+    saveDeskDraft(null); setPiece(blank()); setSavedSig(''); setSavedAt(''); setErr(''); setPickOpen(false); setTab('write')
   }
 
   // 서재에서 "고치기/이어 쓰기": 서버에서 글을 가져와 쓰는 화면으로
@@ -247,6 +253,7 @@ export default function Desk() {
                 <div className="ft">
                   <span>{piece.body.length}자 · 실명·학교·연락처는 쓰지 않아요 {unsaved ? <b className="unsaved">· 아직 저장 안 됨 (이 기기에만 있어요)</b> : (savedAt || savedSig) && <b className="saved">· {savedAt || '저장돼 있어요'}</b>}</span>
                   <span className="acts">
+                    <button className="btn sub" type="button" onClick={newPiece}>새 글 쓰기</button>
                     <button className="btn sub" type="button" disabled={busy} onClick={() => void doSave('draft')}>{busy ? '저장 중…' : '임시 저장'}</button>
                     <button className="btn sub" type="button" disabled={piece.body.trim().length < 30} title="30글자 이상 써야 해요" onClick={showWriter}>AI 작가에게 보여주기</button>
                     <a role="button" tabIndex={0} onClick={() => setTab('review')}>다 썼어요, 퇴고하러 →</a>
@@ -300,14 +307,20 @@ export default function Desk() {
                 {keyBad && relogin}
                 <div className="ft">
                   <span>나다운 문장 {picks.length}개 선택됨</span>
-                  <a role="button" tabIndex={0} onClick={() => void publish()}>{busy ? '발행 중…' : '서재에 꽂기(발행) →'}</a>
+                  <span className="acts">
+                    <button className="btn sub" type="button" onClick={() => setTab('write')}>← 고쳐 쓰러 가기</button>
+                    <a role="button" tabIndex={0} onClick={() => void publish()}>{busy ? '발행 중…' : '서재에 꽂기(발행) →'}</a>
+                  </span>
                 </div>
               </article>
             </>
           )}
 
           {tab === 'shelf' && (
-            <DeskShelf session={session} onEdit={editPiece} />
+            <>
+              <p style={{ margin: '0 0 12px' }}><button className="btn sub" type="button" onClick={newPiece}>+ 새 글 쓰기</button></p>
+              <DeskShelf session={session} onEdit={editPiece} />
+            </>
           )}
         </div>
       </div>

@@ -86,6 +86,10 @@
 .dk .det b{font:700 24px 'Gowun Batang',serif}
 .dk .det span{display:block;color:var(--mute);font-size:16px}
 .dk .det a{font-weight:700;color:var(--red);cursor:pointer;border-bottom:2px solid var(--red)}
+/* 서재 버튼 줄: 위 span{display:block} 때문에 붙던 것을 가로 정렬+간격으로 */
+.dk .det .acts{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:center}
+.dk .ft{gap:16px;flex-wrap:wrap}
+.dk .ft a{display:inline-block;padding:10px 0 2px}
 @media(max-width:600px){.dk .spines{padding:0 40px 0 60px}.dk .bk.sel,.dk .bk.sel:hover{margin-left:14px;margin-right:50px;transform:translateZ(30px) rotateY(-40deg)}}
 @media(prefers-reduced-motion:reduce){.dk .bk{transition:none}.dk .bk:hover,.dk .bk.sel{transform:translateY(-10px)!important}.dk .f.cv{display:none}}
 .dk .rd{position:fixed;inset:0;background:radial-gradient(circle at 50% 38%,#4B3320 0%,#2A1C10 45%,#0F0A05 100%);display:none;flex-direction:column;align-items:center;justify-content:center;gap:34px;z-index:50;perspective:2400px;padding:20px}
@@ -160,7 +164,7 @@
 .dk .bar .who button{margin-left:10px}
 .dk .ms .body{display:block}
 .dk .saved{color:var(--pine)}
-.dk .ft .acts{display:flex;gap:18px;align-items:center}
+.dk .ft .acts{display:flex;gap:8px 28px;align-items:center;flex-wrap:wrap}
 .dk .empty{color:var(--mute);padding:40px 0}
 .dk .pack{max-width:760px;margin:0 auto}
 .dk .pack textarea{width:100%;min-height:200px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:400 16px/1.8 'Pretendard Variable',sans-serif;padding:14px}
