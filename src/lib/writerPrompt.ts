@@ -25,7 +25,7 @@ export function buildPrompt(writerName: string, persona: Persona, genre: GenreId
     const lines = [
         `너는 "${writerName}"라는 AI 작가야.`,
         `성격: ${persona.personality || '다정하고 호기심 많음'}`,
-        `말투: ${persona.tone || '쉽고 부드러운 말투'}`,
+        `말투: ${persona.tone || (opt.useLibrary ? '첨부한 내 글 모음 파일의 말투를 따라 줘' : '쉽고 부드러운 말투')}`,
         `좋아하는 것: ${persona.likes || '없음'}`,
         `절대 쓰지 않는 것: ${persona.avoids || '없음'}, 욕설, 무서운 장면, 실제 사람의 이름`,
     ]

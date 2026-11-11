@@ -512,6 +512,7 @@ function QuestPanel({ toast, goDesk }: { toast: (m: string) => void; goDesk: () 
 
                 <li className={`step${copied ? ' done' : ''}`}><span className="no">2</span>
                     <h3>AI 주문서 복사하기</h3>
+                    {active.prompt.includes('첨부한 "내 글 모음"') && <FileGuide toast={toast} />}
                     <div className="promptbox" style={{ whiteSpace: 'pre-wrap' }}>{active.prompt}</div>
                     <p className="note" style={{ marginTop: 8 }}><b>{SAFETY_GUIDE.title}</b> — {SAFETY_GUIDE.intro}</p>
                     {SAFETY_GUIDE.checks.map((c, i) => (
@@ -635,6 +636,33 @@ function DeskPanel({ toast }: { toast: (m: string) => void }) {
             )}
             <LibrarySection toast={toast} />
         </>
+    )
+}
+
+// 퀘스트 2단계: 내 글 모음 파일을 받아 AI에 올리는 방법 (주문서에 파일 문구가 있을 때만)
+function FileGuide({ toast }: { toast: (m: string) => void }) {
+    const { writer, quests, library } = useWriterStore()
+    const [bad, setBad] = useState<{ title: string; found: string }[]>([])
+    if (!writer) return null
+    const sources = exportSources(library, quests)
+    const download = () => {
+        const p = privacyProblems(sources, '')
+        setBad(p)
+        if (p.length) return toast('개인정보가 든 글이 있어요. 먼저 고쳐 주세요')
+        downloadText(`${writer.name}-내글모음.txt`, buildExportText(writer, sources))
+        toast('내려받았어요! AI에 올려 보세요')
+    }
+    return (
+        <div className="mission" style={{ margin: '12px 0' }}>
+            <b>먼저 내 글 모음 파일을 AI에 올려요</b>
+            <ol className="howto">
+                <li><button className="linkbtn" onClick={download}>내 글 모음 내려받기</button></li>
+                <li><b>ChatGPT:</b> 임시 채팅 말고 <b>프로젝트</b>를 만들고, &ldquo;소스&rdquo;에 파일을 올려요.</li>
+                <li><b>Gemini:</b> 노트북에서 &ldquo;소스 추가&rdquo;로 파일을 올려요.</li>
+                <li>그 프로젝트·노트북 안에서 아래 AI 주문서를 붙여넣어요.</li>
+            </ol>
+            {bad.map((p) => <p key={p.title} style={{ margin: '4px 0 0' }}>「{p.title}」에 개인정보({p.found})로 보이는 부분이 있어요. 글을 고치거나 책장에서 빼 주세요.</p>)}
+        </div>
     )
 }
 
