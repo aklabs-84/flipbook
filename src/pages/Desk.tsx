@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import '../styles/desk.css'
 import Footer from '../components/together/Footer'
 import DeskShelf from './DeskShelf'
+import DeskCollect from './DeskCollect'
 import { findSpellHints } from '../lib/spell'
 import { Link } from 'react-router-dom'
 import { useWriterStore } from '../store/writerStore'
@@ -13,7 +14,7 @@ import {
   type DeskSession, type DeskPieceInput, type DeskPieceItem,
 } from '../lib/desk'
 
-type Tab = 'write' | 'review' | 'shelf'
+type Tab = 'write' | 'review' | 'shelf' | 'all'
 
 interface Mat { topic: string; who: string; what: string; mood: string }
 const EMPTY_MAT: Mat = { topic: '', who: '', what: '', mood: '' }
@@ -164,7 +165,7 @@ export default function Desk() {
       <div className="bar">
         <b>작가의 책상</b>
         <nav>
-          {([['write', '쓰는 중'], ['review', '퇴고'], ['shelf', '내 서재']] as const).map(([k, l]) => (
+          {([['write', '쓰는 중'], ['review', '퇴고'], ['shelf', '내 서재'], ['all', '전체']] as const).map(([k, l]) => (
             <a key={k} className={tab === k ? 'on' : ''} role="button" tabIndex={0}
               onClick={() => setTab(k)} onKeyDown={e => { if (e.key === 'Enter') setTab(k) }}>{l}</a>
           ))}
@@ -173,9 +174,23 @@ export default function Desk() {
           <button className="btn sub" type="button" onClick={() => { clearDeskSession(); setSession(null) }}>나가기</button>
         </span>
       </div>
-      <div className="steps">
-        {steps.map(([l, done], i) => <span key={l} className={done ? 'done' : i === nowIdx ? 'now' : ''}>{l}</span>)}
-      </div>
+      {tab === 'write' && (
+        <div className="stepwrap">
+          <div className="stepbox">
+            <div className="stepcap">
+              {nowIdx < 0 ? '글 쓰는 순서 · 모두 끝났어요 🎉' : <>글 쓰는 순서 · 지금 {nowIdx + 1}단계<span className="sfx">예요</span></>}
+            </div>
+            <ol className="stp" aria-label="글 쓰는 순서">
+              {steps.map(([l, done], i) => (
+                <li key={l} className={done ? 'done' : i === nowIdx ? 'now' : ''} aria-current={i === nowIdx ? 'step' : undefined}>
+                  <i aria-hidden="true">{done ? '✓' : i + 1}</i>
+                  <span>{l.slice(2).trim()}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
 
       <div className="main">
         <div className="stage">
@@ -322,6 +337,8 @@ export default function Desk() {
               <DeskShelf session={session} onEdit={editPiece} />
             </>
           )}
+
+          {tab === 'all' && <DeskCollect session={session} onEdit={editPiece} />}
         </div>
       </div>
       <Footer />

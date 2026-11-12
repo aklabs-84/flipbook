@@ -1,18 +1,38 @@
-import { useMemo, useState } from 'react'
-import { deskGet, type DeskPieceItem, type DeskSession } from '../lib/desk'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { deskGet, deskList, deskDelete, type DeskPieceItem, type DeskSession } from '../lib/desk'
 import { useWriterStore } from '../store/writerStore'
 
 const MIN_SEND = 30 // '쓰는 중'의 "AI 작가에게 보여주기"와 같은 기준
 const fmtDate = (iso: string) => { const d = new Date(iso); return `${d.getMonth() + 1}월 ${d.getDate()}일` }
 
 // 내가 쓴 글을 한 줄씩 모아 보고, 골라서 한 번에 AI 작가에게 보내는 목록
-export default function DeskCollect({ session, items, onEdit }: { session: DeskSession; items: DeskPieceItem[]; onEdit: (id: string) => void }) {
+export default function DeskCollect({ session, onEdit }: { session: DeskSession; onEdit: (id: string) => void }) {
   const addToLibrary = useWriterStore(st => st.addToLibrary)
+  const [items, setItems] = useState<DeskPieceItem[] | null>(null)
+  const [err, setErr] = useState('')
   const [picked, setPicked] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
-  const rows = useMemo(() => [...items].sort((a, b) => b.updated_at.localeCompare(a.updated_at)), [items])
+  const load = useCallback(async () => {
+    try { setItems(await deskList(session.key)); setErr('') }
+    catch (e) { setErr(e instanceof Error ? e.message : '글 목록을 불러오지 못했어요') }
+  }, [session.key])
+  useEffect(() => { void load() }, [load])
+
+  const rows = useMemo(() => [...(items ?? [])].sort((a, b) => b.updated_at.localeCompare(a.updated_at)), [items])
+
+  const remove = async (i: DeskPieceItem) => {
+    if (!window.confirm(`'${i.title || '(제목 없음)'}' 글을 지울까요? 지우면 되돌릴 수 없어요.`)) return
+    setBusy(true)
+    try {
+      await deskDelete(session.key, i.id)
+      setPicked(p => p.filter(x => x !== i.id))
+      setMsg('')
+      await load()
+    } catch (e) { setMsg(e instanceof Error ? e.message : '지우지 못했어요') }
+    finally { setBusy(false) }
+  }
   const ok = (i: DeskPieceItem) => i.len >= MIN_SEND
   const okIds = rows.filter(ok).map(i => i.id)
   const toggle = (id: string) => setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : [...p, id]))
@@ -40,8 +60,13 @@ export default function DeskCollect({ session, items, onEdit }: { session: DeskS
     setPicked([]); setBusy(false)
   }
 
+  if (err) return <div className="collect"><h2>전체 글</h2><p role="alert" style={{ color: 'var(--red)' }}>{err}</p></div>
+  if (!items) return <div className="collect"><h2>전체 글</h2><p style={{ color: 'var(--mute)' }}>글을 불러오는 중…</p></div>
+
   return (
     <div className="collect">
+      <h2>전체 글</h2>
+      <p style={{ color: 'var(--mute)', margin: '0 0 18px' }}>내가 쓴 글을 한곳에서 보고, 골라서 AI 작가에게 한 번에 보내요.</p>
       <div className="ctl">
         <label className="all">
           <input type="checkbox" checked={allOn} disabled={!okIds.length || busy} onChange={() => setPicked(allOn ? [] : okIds)} />
@@ -68,6 +93,7 @@ export default function DeskCollect({ session, items, onEdit }: { session: DeskS
               </span>
             </label>
             <button className="btn sub" type="button" disabled={busy} onClick={() => onEdit(i.id)}>{i.status === 'draft' ? '이어 쓰기' : '고치기'}</button>
+            <button className="btn sub del" type="button" disabled={busy} onClick={() => void remove(i)}>🗑 지우기</button>
           </li>
         ))}
       </ul>
