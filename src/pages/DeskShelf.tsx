@@ -47,6 +47,9 @@ const readMat = (memo: string): { topic?: string; mood?: string } => {
   try { return JSON.parse(memo) as { topic?: string; mood?: string } } catch { return {} }
 }
 const fmtDate = (iso: string) => { const d = new Date(iso); return `${d.getMonth() + 1}월 ${d.getDate()}일` }
+// 책 제목 길이에 따라 글씨 크기 이름표(t1~t4)를 붙이고, 책등은 12글자까지만 보여줌
+const tlen = (t: string) => { const n = [...(t || '(제목 없음)')].length; return n <= 7 ? 't1' : n <= 9 ? 't2' : n <= 12 ? 't3' : 't4' }
+const spineTitle = (t: string) => { const a = [...(t || '(제목 없음)')]; return a.length > 12 ? a.slice(0, 11).join('') + '…' : a.join('') }
 const mob = () => typeof matchMedia !== 'undefined' && matchMedia('(max-width:700px)').matches
 
 // ---- 서재 ----
@@ -145,8 +148,8 @@ export default function DeskShelf({ session, onEdit }: { session: DeskSession; o
               style={{ '--t': `${40 + Math.min(Math.floor(b.len / 12), 40)}px`, '--h': `${185 + ((n * 37) % 50)}px`, '--d': '150px', '--c': b.color } as React.CSSProperties}
               onClick={e => { e.stopPropagation(); pick(b.id) }}
               onKeyDown={e => { if (e.key === 'Enter') pick(b.id) }}>
-              <div className="f sp"><span>{b.title || '(제목 없음)'}</span></div>
-              <div className="f cv"><b>{b.title || '(제목 없음)'}</b><small>글 · {session.nickname}</small></div>
+              <div className={'f sp ' + tlen(b.title)}><span>{spineTitle(b.title)}</span></div>
+              <div className={'f cv ' + tlen(b.title)}><b>{b.title || '(제목 없음)'}</b><small>글 · {session.nickname}</small></div>
               <div className="f bc" /><div className="f pg" /><div className="f tp" />
             </div>
           ))}
