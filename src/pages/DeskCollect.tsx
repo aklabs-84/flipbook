@@ -13,6 +13,7 @@ export default function DeskCollect({ session, onEdit }: { session: DeskSession;
   const [picked, setPicked] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [selecting, setSelecting] = useState(false)
 
   const load = useCallback(async () => {
     try { setItems(await deskList(session.key)); setErr('') }
@@ -57,46 +58,72 @@ export default function DeskCollect({ session, onEdit }: { session: DeskSession;
     if (failed) parts.push(`${failed}편은 불러오지 못했어요`)
     if (full) parts.push('AI 작가 책장이 가득 차서 나머지는 못 보냈어요. AI 작가 방에서 오래된 글을 지워 주세요')
     setMsg(parts.join(' · '))
-    setPicked([]); setBusy(false)
+    setPicked([]); setBusy(false); setSelecting(false)
   }
 
   if (err) return <div className="collect"><h2>전체 글</h2><p role="alert" style={{ color: 'var(--red)' }}>{err}</p></div>
   if (!items) return <div className="collect"><h2>전체 글</h2><p style={{ color: 'var(--mute)' }}>글을 불러오는 중…</p></div>
 
+  const stop = () => { setSelecting(false); setPicked([]); setMsg('') }
+
   return (
     <div className="collect">
-      <h2>전체 글</h2>
-      <p style={{ color: 'var(--mute)', margin: '0 0 18px' }}>내가 쓴 글을 한곳에서 보고, 골라서 AI 작가에게 한 번에 보내요.</p>
-      <div className="ctl">
-        <label className="all">
-          <input type="checkbox" checked={allOn} disabled={!okIds.length || busy} onChange={() => setPicked(allOn ? [] : okIds)} />
-          <span>전체 선택</span>
-        </label>
-        <button className="btn" type="button" disabled={!picked.length || busy} onClick={() => void send()}>
-          {busy ? '보내는 중…' : picked.length ? `선택한 글 ${picked.length}편 AI 작가에게 보내기` : 'AI 작가에게 보낼 글을 골라요'}
-        </button>
+      <div className="chead">
+        <div>
+          <h2>내가 쓴 글 {rows.length}편</h2>
+          <p className="cdesc">쓴 글을 보고, 고치고, 지울 수 있어요.</p>
+        </div>
+        {!selecting && rows.length > 0 && (
+          <button className="btn" type="button" onClick={() => { setSelecting(true); setMsg('') }}>AI 작가에게 보내기</button>
+        )}
       </div>
+      {selecting && (
+        <div className="cbanner" role="status">
+          <b>보낼 글을 골라요.</b> 지금 {picked.length}편 골랐어요.
+          <label className="all">
+            <input type="checkbox" checked={allOn} disabled={!okIds.length || busy} onChange={() => setPicked(allOn ? [] : okIds)} />
+            <span>전체 선택</span>
+          </label>
+        </div>
+      )}
       {msg && <p role="status" className="cmsg" style={{ color: msg.startsWith('✔') ? 'var(--pine)' : 'var(--mute)' }}>{msg}</p>}
       {rows.length === 0 && <p className="empty">아직 쓴 글이 없어요. '쓰는 중'에서 먼저 써 볼까요?</p>}
       <ul className="clist">
         {rows.map(i => (
-          <li key={i.id} className={ok(i) ? '' : 'off'}>
-            <label>
-              <input type="checkbox" checked={picked.includes(i.id)} disabled={!ok(i) || busy} onChange={() => toggle(i.id)} aria-label={`${i.title || '(제목 없음)'} 선택`} />
-              <span className="tt">
-                <b>{i.title || '(제목 없음)'}</b>
-                <small>
-                  {i.genre || '글'} · {i.len}자 · {fmtDate(i.updated_at)}
-                  {i.status === 'draft' && ' · 쓰다 만 글'}
-                  {!ok(i) && ` · ${MIN_SEND}글자보다 짧아서 아직 보낼 수 없어요`}
-                </small>
-              </span>
-            </label>
-            <button className="btn sub" type="button" disabled={busy} onClick={() => onEdit(i.id)}>{i.status === 'draft' ? '이어 쓰기' : '고치기'}</button>
-            <button className="btn sub del" type="button" disabled={busy} onClick={() => void remove(i)}>🗑 지우기</button>
+          <li key={i.id} className={selecting && !ok(i) ? 'off' : ''}>
+            {selecting ? (
+              <label>
+                <input type="checkbox" checked={picked.includes(i.id)} disabled={!ok(i) || busy} onChange={() => toggle(i.id)} aria-label={`${i.title || '(제목 없음)'} 선택`} />
+                <span className="tt">
+                  <b>{i.title || '(제목 없음)'}</b>
+                  <small>
+                    {i.genre || '글'} · {i.len}자 · {fmtDate(i.updated_at)}
+                    {i.status === 'draft' && ' · 쓰다 만 글'}
+                    {!ok(i) && ` · ${MIN_SEND}글자보다 짧아서 보낼 수 없어요`}
+                  </small>
+                </span>
+              </label>
+            ) : (
+              <>
+                <span className="tt">
+                  <b>{i.title || '(제목 없음)'}</b>
+                  <small>{i.genre || '글'} · {i.len}자 · {fmtDate(i.updated_at)}{i.status === 'draft' && ' · 쓰다 만 글'}</small>
+                </span>
+                <button className="btn sub" type="button" disabled={busy} onClick={() => onEdit(i.id)}>{i.status === 'draft' ? '이어 쓰기' : '고치기'}</button>
+                <button className="btn sub del" type="button" disabled={busy} onClick={() => void remove(i)}>🗑 지우기</button>
+              </>
+            )}
           </li>
         ))}
       </ul>
+      {selecting && (
+        <div className="cbar">
+          <button className="btn sub" type="button" disabled={busy} onClick={stop}>그만두기</button>
+          <button className="btn" type="button" disabled={!picked.length || busy} onClick={() => void send()}>
+            {busy ? '보내는 중…' : picked.length ? `${picked.length}편 AI 작가에게 보내기` : '글을 먼저 골라요'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
