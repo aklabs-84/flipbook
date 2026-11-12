@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import {
-  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherPages, teacherMembers, teacherRelease, teacherSetTurn, teacherSetBook, teacherSetSent, teacherGetSent, amTeacher, teacherSetLeader, teacherBgm, teacherBgmSynced,
+  teacherOverview, teacherCreateRoom, teacherRoom, teacherHide, teacherClose, teacherDeleteRoom, teacherReopen, teacherPages, teacherMembers, teacherRelease, teacherSetTurn, teacherSetBook, teacherSetSent, teacherGetSent, amTeacher, teacherSetLeader, teacherBgm, teacherBgmSynced,
   type TeacherMember, TeacherRoomSummary, type TeacherLine, type RelayMode,
 } from '../../lib/relay'
 import { uploadMedia } from '../../services/storageService'
@@ -187,6 +187,18 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
     })
   }
 
+  async function reopen(code: string) {
+    const ok = await run(async () => { await teacherReopen(tc, code); return true })
+    if (ok) { await refresh(); setInfo('방을 다시 열었어요. 학생이 [새 글 확인]을 누르면 이어서 쓸 수 있어요.') }
+  }
+
+  async function removeRoom(r: TeacherRoomSummary) {
+    ask(`"${r.name}" 방을 지울까요?\n방, 친구 목록, 이야기가 모두 사라져요. 되돌릴 수 없어요.\n(이미 책으로 보낸 글은 책에 그대로 남아요.)`, async () => {
+      const ok = await run(async () => { await teacherDeleteRoom(tc, r.code); return true })
+      if (ok) { setOpenCode(''); await refresh(); setInfo('방을 지웠어요.') }
+    })
+  }
+
   if (!authed) {
     return (
       <div className="wrap">
@@ -323,12 +335,15 @@ export default function TeacherBoard({ onBack }: { onBack: () => void }) {
                               )}
                             </div>
                           </div>
-                          {r.status !== 'done' && (
-                            <div className="card" style={{ margin: 0 }}>
-                              <b>🚪 방 닫기</b>
-                              <div className="col"><button className="btn red sm" type="button" onClick={() => void close(r.code)}>이 방 마무리하기</button></div>
+                          <div className="card" style={{ margin: 0 }}>
+                            <b>🚪 방 정리</b>
+                            <div className="col">
+                              {r.status !== 'done'
+                                ? <button className="btn red sm" type="button" disabled={busy} onClick={() => void close(r.code)}>이 방 마무리하기</button>
+                                : <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void reopen(r.code)}>🔓 다시 열기</button>}
+                              <button className="btn red sm" type="button" disabled={busy} onClick={() => void removeRoom(r)}>🗑 이 방 지우기</button>
                             </div>
-                          )}
+                          </div>
                         </aside>
                       </div>
                     </td>
