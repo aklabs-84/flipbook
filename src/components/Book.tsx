@@ -13,6 +13,7 @@ interface BookProps {
     onFlipPage?: () => void
     typingSpeed?: number
     isTypewriterEnabled?: boolean
+    canDraw?: boolean // 편집 화면의 이미지·PDF 책에서 쪽마다 [그리기] 버튼을 켠다
 }
 
 // Helper to normalize content into a single array
@@ -25,7 +26,7 @@ type BookPageData =
     | { type: 'back-cover'; id: string }
     | { type: 'padding'; id: string }
 
-export default function Book({ onUpdateLayers, onPageClick, command, isLocked, onFlipPage, typingSpeed = 50, isTypewriterEnabled = true }: BookProps) {
+export default function Book({ onUpdateLayers, onPageClick, command, isLocked, onFlipPage, typingSpeed = 50, isTypewriterEnabled = true, canDraw }: BookProps) {
     const {
         pages,
         currentLeaf,
@@ -303,6 +304,7 @@ export default function Book({ onUpdateLayers, onPageClick, command, isLocked, o
                     onUpdateLayers={onUpdateLayers || (() => { })}
                     command={command}
                     isLocked={isLocked}
+                    canDraw={canDraw}
                     shouldLoad={true}
                     className="bg-[#fdfbf7] select-none"
                 />

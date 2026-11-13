@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Upload, Play, Loader2 } from 'lucide-react'
 import { useBookStore } from '../store/bookStore'
+import { DrawingPad, DrawingOverlay, readDrawing, withDrawing, type Drawing } from './DrawingPad'
 // @ts-ignore
 import { Database } from '../types/supabase'
 
@@ -29,6 +30,22 @@ export const StorybookPage: React.FC<StorybookPageProps> = ({ page, isEditing, m
     const [isFocused, setIsFocused] = useState(false) // New: Track focus for editing
     const [triggerPlay, setTriggerPlay] = useState(0)
     const [isUploading, setIsUploading] = useState(false) // New: Upload loading state
+
+    // 손그림: 그림 데이터는 text_layers.drawing 에 있고, 글을 저장할 때도 그대로 함께 저장해야 사라지지 않는다
+    const drawing = readDrawing(page.text_layers)
+    const imgAreaRef = useRef<HTMLDivElement>(null)
+    const [pad, setPad] = useState<{ aspect: number } | null>(null)
+    const openPad = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        const r = imgAreaRef.current?.getBoundingClientRect()
+        setPad({ aspect: r && r.width > 0 && r.height > 0 ? r.width / r.height : 0.75 })
+    }
+    const finishPad = (d: Drawing | null) => {
+        const next = { content: text, type: 'text', imageFit, fontSize, ...withDrawing(null, d) }
+        if (onPageUpdate) onPageUpdate(page.id, next)
+        else { updatePage(page.id, { text_layers: next }); savePageChanges(page.id, { text_layers: next }) }
+        setPad(null)
+    }
 
     // Refs for effect access
     const textRef = useRef(text)
@@ -139,7 +156,7 @@ export const StorybookPage: React.FC<StorybookPageProps> = ({ page, isEditing, m
 
         // Auto-save logic could go here (debounce)
         // For now, we update store state immediately
-        const newLayerData = { content: newText, type: 'text', imageFit, fontSize }
+        const newLayerData = { content: newText, type: 'text', imageFit, fontSize, drawing }
 
         if (onPageUpdate) {
             onPageUpdate(page.id, newLayerData)
@@ -151,7 +168,7 @@ export const StorybookPage: React.FC<StorybookPageProps> = ({ page, isEditing, m
     const handleFontSizeChange = (delta: number) => {
         const newSize = Math.max(12, Math.min(60, fontSize + delta))
         setFontSize(newSize)
-        const newLayerData = { content: text, type: 'text', imageFit, fontSize: newSize }
+        const newLayerData = { content: text, type: 'text', imageFit, fontSize: newSize, drawing }
 
         if (onPageUpdate) {
             onPageUpdate(page.id, newLayerData)
@@ -164,7 +181,7 @@ export const StorybookPage: React.FC<StorybookPageProps> = ({ page, isEditing, m
     const handleBlur = () => {
         setIsFocused(false) // Exit focus mode
         // Save on blur
-        const newLayerData = { content: text, type: 'text', imageFit, fontSize }
+        const newLayerData = { content: text, type: 'text', imageFit, fontSize, drawing }
 
         if (onPageUpdate) {
             onPageUpdate(page.id, newLayerData)
@@ -205,7 +222,7 @@ export const StorybookPage: React.FC<StorybookPageProps> = ({ page, isEditing, m
         <div className="w-full h-full flex bg-white shadow-sm overflow-hidden">
             {/* Image Area - Show if mode is image or both */}
             {(mode === 'image' || mode === 'both') && (
-                <div className={`${mode === 'both' ? 'w-1/2 border-r' : 'w-full'} h-full border-gray-100 relative bg-gray-50 flex items-center justify-center group`}>
+                <div ref={imgAreaRef} className={`${mode === 'both' ? 'w-1/2 border-r' : 'w-full'} h-full border-gray-100 relative bg-gray-50 flex items-center justify-center group`}>
                     {isUploading ? (
                         <div className="flex flex-col items-center justify-center gap-2 text-brand-purple animate-pulse">
                             <Loader2 className="w-8 h-8 animate-spin" />
@@ -222,6 +239,24 @@ export const StorybookPage: React.FC<StorybookPageProps> = ({ page, isEditing, m
                             <Upload className="w-12 h-12 mx-auto mb-2 opacity-50" />
                             <span className="text-sm">이미지 업로드</span>
                         </div>
+                    )}
+
+                    <div className="absolute inset-0 pointer-events-none"><DrawingOverlay drawing={drawing} /></div>
+
+                    {!isUploading && isEditing && (
+                        <button
+                            type="button"
+                            onClick={openPad}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            className="absolute top-3 right-3 z-30 min-h-[44px] px-4 rounded-xl bg-white/90 border-2 border-brand-purple text-brand-purple font-bold text-sm shadow hover:bg-brand-purple hover:text-white transition"
+                            aria-label="이 쪽에 그림 그리기"
+                        >
+                            {drawing ? '✏ 그림 고치기' : '✏ 그리기'}
+                        </button>
+                    )}
+                    {pad && (
+                        <DrawingPad initial={drawing} aspect={pad.aspect} onCancel={() => setPad(null)} onDone={finishPad} />
                     )}
 
                     {!isUploading && isEditing && (

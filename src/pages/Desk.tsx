@@ -333,7 +333,7 @@ export default function Desk() {
 
           {tab === 'shelf' && (
             <>
-              <p style={{ margin: '0 0 12px' }}><button className="btn sub" type="button" onClick={newPiece}>+ 새 글 쓰기</button></p>
+              <p className="newrow"><button className="btn newbig" type="button" onClick={newPiece}>+ 새 글 쓰기</button></p>
               <DeskShelf session={session} onEdit={editPiece} />
             </>
           )}

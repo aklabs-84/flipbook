@@ -363,7 +363,13 @@ export default function Editor() {
 
     // Debounced save
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-    const handleUpdateLayers = useCallback((pageId: string, fabricJson: any) => {
+    const handleUpdateLayers = useCallback((pageId: string, incoming: any) => {
+        // 캔버스가 저장하는 JSON에는 손그림이 없으므로, 새 값에 'drawing' 키가 없으면 기존 그림을 이어 붙인다
+        let fabricJson = incoming
+        if (incoming && typeof incoming === 'object' && !Array.isArray(incoming) && !('drawing' in incoming)) {
+            const old = useBookStore.getState().pages.find(p => p.id === pageId)?.text_layers as any
+            if (old && typeof old === 'object' && old.drawing) fabricJson = { ...incoming, drawing: old.drawing }
+        }
         updatePage(pageId, { text_layers: fabricJson })
         setSaveStatus('saving')
 
@@ -662,6 +668,7 @@ export default function Editor() {
                             <Book
                                 command={canvasCommand || undefined}
                                 isLocked={isLocked}
+                                canDraw={bookType === 'image' || bookType === 'pdf'}
                                 onUpdateLayers={handleUpdateLayers}
                                 onFlipPage={playPageFlip}
                                 typingSpeed={typingSpeed}

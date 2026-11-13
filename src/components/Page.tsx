@@ -1,7 +1,8 @@
-import React, { forwardRef } from 'react'
+import React, { forwardRef, useState } from 'react'
 import { Database } from '../types/supabase'
 import FabricCanvas from './FabricCanvas'
 import { useEditorStore } from '../store/editorStore'
+import { DrawingPad, DrawingOverlay, readDrawing, withDrawing, type Drawing } from './DrawingPad'
 
 type PageData = Database['public']['Tables']['pages']['Row']
 
@@ -19,6 +20,7 @@ interface PageProps {
     isRtl?: boolean
     width?: number
     height?: number
+    canDraw?: boolean // true면 이 쪽에 [그리기] 버튼을 보여 준다 (이미지·PDF 책 편집 화면)
 }
 
 const PAGE_WIDTH = 650
@@ -33,9 +35,12 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({
     command,
     isLocked,
     style,
-    className
+    className,
+    canDraw
 }, ref) => {
     const { activeTool, brushColor, brushWidth, setSelectedLayer, setActiveTool } = useEditorStore()
+    const [padOpen, setPadOpen] = useState(false)
+    const drawing = readDrawing(page.text_layers)
 
     const handleClick = () => {
         if (activeTool === 'select') {
@@ -96,6 +101,32 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({
                     }}
                 />
             </div>
+
+            {/* 손그림 (글·사진 위에 얹힘) */}
+            <div className="absolute inset-0 z-[15] pointer-events-none">
+                <DrawingOverlay drawing={drawing} />
+            </div>
+
+            {canDraw && (
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setPadOpen(true) }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    className="absolute top-3 right-3 z-30 min-h-[44px] px-4 rounded-xl bg-white/90 border-2 border-brand-purple text-brand-purple font-bold text-sm shadow hover:bg-brand-purple hover:text-white transition"
+                    aria-label="이 쪽에 그림 그리기"
+                >
+                    {drawing ? '✏ 그림 고치기' : '✏ 그리기'}
+                </button>
+            )}
+            {padOpen && (
+                <DrawingPad
+                    initial={drawing}
+                    aspect={PAGE_WIDTH / PAGE_HEIGHT}
+                    onCancel={() => setPadOpen(false)}
+                    onDone={(d: Drawing | null) => { onUpdateLayers(page.id, withDrawing(page.text_layers, d)); setPadOpen(false) }}
+                />
+            )}
 
             {/* Page Number */}
             {showPageNumbers && (
