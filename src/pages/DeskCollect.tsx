@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { deskGet, deskList, deskDelete, type DeskPieceItem, type DeskSession } from '../lib/desk'
 import { useWriterStore } from '../store/writerStore'
+import DeskSubmit from './DeskSubmit'
 
 const MIN_SEND = 30 // '쓰는 중'의 "AI 작가에게 보여주기"와 같은 기준
 const fmtDate = (iso: string) => { const d = new Date(iso); return `${d.getMonth() + 1}월 ${d.getDate()}일` }
@@ -110,6 +111,7 @@ export default function DeskCollect({ session, onEdit }: { session: DeskSession;
                   <small>{i.genre || '글'} · {i.len}자 · {fmtDate(i.updated_at)}{i.status === 'draft' && ' · 쓰다 만 글'}</small>
                 </span>
                 <button className="btn sub" type="button" disabled={busy} onClick={() => onEdit(i.id)}>{i.status === 'draft' ? '이어 쓰기' : '고치기'}</button>
+                <DeskSubmit session={session} id={i.id} disabled={busy} />
                 <button className="btn sub del" type="button" disabled={busy} onClick={() => void remove(i)}>🗑 지우기</button>
               </>
             )}

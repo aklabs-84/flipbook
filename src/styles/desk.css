@@ -297,3 +297,25 @@
 .dk .collect .clist .tt{display:block;min-width:0}
 .dk .collect .clist b{display:block;font:700 19px 'Gowun Batang',serif;overflow-wrap:anywhere}
 .dk .collect .clist small{display:block;color:var(--mute);font-size:15px}
+
+/* 선생님께 제출: 큰 안내 창 (제출 중 → 제출 완료 / 실패) */
+.dk .btn.sbm{display:inline-flex;align-items:center;gap:6px}
+.dk .sbm-pop{position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:rgba(20,14,8,.5);padding:16px}
+.dk .sbm-card{background:var(--paper);border:1px solid var(--line);box-shadow:0 24px 60px -20px rgba(0,0,0,.55);width:100%;max-width:400px;padding:40px 32px 32px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;animation:dkPopIn .25s ease-out}
+.dk .sbm-card b{font:700 32px/1.3 'Gowun Batang',serif;color:var(--ink)}
+.dk .sbm-card small{color:var(--mute);font-size:18px;line-height:1.6}
+.dk .sbm-ico{display:grid;place-items:center;width:96px;height:96px;font-size:56px;line-height:1;margin-bottom:6px}
+.dk .sbm-card.sending .env{animation:dkFlyBig 1.1s ease-in-out infinite}
+.dk .sbm-card.done b{color:var(--pine)}
+.dk .sbm-card.done .ok{border-radius:50%;background:var(--pine);color:#fff;animation:dkPop .55s cubic-bezier(.3,1.6,.5,1)}
+.dk .sbm-card.err b{color:var(--red)}
+.dk .sbm-card .bad{border-radius:50%;background:var(--red);color:#fff;font:700 56px/1 sans-serif}
+.dk .sbm-card .btn{min-height:48px;min-width:140px;margin-top:14px;font-size:18px}
+.dk .sbm-card div{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+@keyframes dkFlyBig{0%{transform:translate(-14px,8px) rotate(-12deg);opacity:.3}50%{transform:translate(0,-4px) rotate(4deg);opacity:1}100%{transform:translate(22px,-18px) rotate(14deg);opacity:0}}
+@keyframes dkPop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes dkPopIn{0%{transform:translateY(10px) scale(.96);opacity:0}100%{transform:none;opacity:1}}
+/* 책을 고르기 전 안내 */
+.dk .det .pickhint{color:var(--mute);font-size:16px}
+@media(prefers-reduced-motion:reduce){.dk .sbm-card,.dk .sbm-card .env,.dk .sbm-card .ok{animation:none}}
+@media(max-width:700px){.dk .collect .clist li .tt{flex-basis:100%}.dk .collect .clist li{gap:6px 18px}}
